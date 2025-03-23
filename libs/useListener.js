@@ -9,7 +9,7 @@ const useListener = (element, downloadUrl, didClick) => {
     link.href = downloadUrl; // 다운로드 URL
     link.target = '_blank';  // 새 탭에서 열기
     link.click();
-    didClick?.();
+    didClick?.(link);
   });
 };
 

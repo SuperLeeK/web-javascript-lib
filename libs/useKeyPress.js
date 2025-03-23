@@ -3,7 +3,7 @@
 function useKeyPress(targetKey, callback) {
   // 이벤트 리스너 함수
   function handleKeyPress(event) {
-    if (event.key === targetKey.toLowerCase()) {
+    if (event.key === targetKey) {
       callback(event);  // 해당 키가 눌렸을 때 콜백 호출
     }
   }
@@ -28,7 +28,7 @@ function useKeysPress(targetKeys, callback) {
     pressedKeys.add(event.key);
 
     // targetKeys에 있는 모든 키가 눌렸는지 확인
-    if (targetKeys.every(key => pressedKeys.has(key.toLowerCase()))) {
+    if (targetKeys.every(key => pressedKeys.has(key))) {
       callback(event);  // 모든 키가 눌렸을 때 콜백 호출
     }
   }

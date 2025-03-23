@@ -3,7 +3,7 @@
 function useKeyPress(targetKey, callback) {
   // 이벤트 리스너 함수
   function handleKeyPress(event) {
-    if (event.key === targetKey) {
+    if (event.key === targetKey.toLowerCase()) {
       callback(event);  // 해당 키가 눌렸을 때 콜백 호출
     }
   }

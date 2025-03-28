@@ -1,4 +1,4 @@
-function enableTooltips() {
+export function enableTooltips() {
   const createTooltip = ({
     target,
     message,
@@ -10,12 +10,15 @@ function enableTooltips() {
     duration = 2000,
     onHide = null,
   }) => {
+    if (target._tooltipActive) return;
+    target._tooltipActive = true;
+
     const tooltip = document.createElement('div');
     const arrow = document.createElement('div');
     tooltip.appendChild(arrow);
     document.body.appendChild(tooltip);
 
-    // 기본 스타일
+    // 스타일 초기화
     Object.assign(tooltip.style, {
       position: 'absolute',
       padding: '6px 10px',
@@ -31,16 +34,25 @@ function enableTooltips() {
       maxWidth: 'calc(100vw - 20px)',
     });
 
-    // 화살표 기본
     Object.assign(arrow.style, {
       position: 'absolute',
       width: '0',
       height: '0',
-      border: 'none',
     });
 
     const setArrowStyle = () => {
+      arrow.style.border = 'none';
       switch (position) {
+        case 'top':
+          Object.assign(arrow.style, {
+            bottom: '-6px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            borderLeft: '6px solid transparent',
+            borderRight: '6px solid transparent',
+            borderTop: '6px solid #333',
+          });
+          break;
         case 'bottom':
           Object.assign(arrow.style, {
             top: '-6px',
@@ -48,7 +60,7 @@ function enableTooltips() {
             transform: 'translateX(-50%)',
             borderLeft: '6px solid transparent',
             borderRight: '6px solid transparent',
-            borderTop: `6px solid ${bgColor}`,
+            borderBottom: '6px solid #333',
           });
           break;
         case 'left':
@@ -58,7 +70,7 @@ function enableTooltips() {
             transform: 'translateY(-50%)',
             borderTop: '6px solid transparent',
             borderBottom: '6px solid transparent',
-            borderRight: `6px solid ${bgColor}`,
+            borderLeft: '6px solid #333',
           });
           break;
         case 'right':
@@ -68,18 +80,7 @@ function enableTooltips() {
             transform: 'translateY(-50%)',
             borderTop: '6px solid transparent',
             borderBottom: '6px solid transparent',
-            borderLeft: `6px solid ${bgColor}`,
-          });
-          break;
-        case 'top':
-        default:
-          Object.assign(arrow.style, {
-            bottom: '-6px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            borderLeft: '6px solid transparent',
-            borderRight: '6px solid transparent',
-            borderBottom: `6px solid ${bgColor}`,
+            borderRight: '6px solid #333',
           });
           break;
       }
@@ -97,8 +98,11 @@ function enableTooltips() {
       tooltip.appendChild(arrow);
       setArrowStyle();
 
-      // 기본 위치 설정
       switch (position) {
+        case 'top':
+          y = rect.top - 6 + scrollY;
+          tooltip.style.transform = motion === 'slide' ? 'translate(-50%, -120%)' : 'translate(-50%, -100%)';
+          break;
         case 'bottom':
           y = rect.bottom + 6 + scrollY;
           tooltip.style.transform = motion === 'slide' ? 'translate(-50%, 20px)' : 'translate(-50%, 10px)';
@@ -113,22 +117,16 @@ function enableTooltips() {
           y = rect.top + rect.height / 2 + scrollY;
           tooltip.style.transform = motion === 'slide' ? 'translate(20%, -50%)' : 'translate(5%, -50%)';
           break;
-        case 'top':
-        default:
-          y = rect.top - 6 + scrollY;
-          tooltip.style.transform = motion === 'slide' ? 'translate(-50%, -120%)' : 'translate(-50%, -100%)';
-          break;
       }
 
       tooltip.style.left = `${x}px`;
       tooltip.style.top = `${y}px`;
 
-      // 툴팁 보이기
       requestAnimationFrame(() => {
         tooltip.style.opacity = '1';
       });
 
-      // 화면 넘어가지 않도록 보정
+      // 위치 보정 (툴팁이 화면 밖으로 벗어나지 않게)
       requestAnimationFrame(() => {
         const tipRect = tooltip.getBoundingClientRect();
         const padding = 8;
@@ -143,11 +141,12 @@ function enableTooltips() {
         }
       });
 
-      // 툴팁 숨기기 및 제거
+      // 사라짐 처리
       setTimeout(() => {
         tooltip.style.opacity = '0';
         setTimeout(() => {
           tooltip.remove();
+          target._tooltipActive = false;
           if (typeof window[onHide] === 'function') {
             window[onHide](target);
           }
@@ -158,6 +157,7 @@ function enableTooltips() {
     setTimeout(show, delay);
   };
 
+  // 바인딩
   const elements = document.querySelectorAll('[tooltip]');
   elements.forEach(el => {
     const handler = () => {
@@ -182,7 +182,7 @@ function enableTooltips() {
     if (useHover) {
       el.addEventListener('mouseenter', handler);
       el.addEventListener('mouseleave', () => {
-        // 자동 제거는 개별 툴팁에서 처리됨
+        // 자동 제거는 내부적으로 처리됨
       });
     } else {
       el.addEventListener('click', handler);

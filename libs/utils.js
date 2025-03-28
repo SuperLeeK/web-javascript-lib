@@ -13,4 +13,27 @@ const cssToObject = (css) => {
   return cssObj;
 };
 
+const objectToCss = (obj) => {
+  return Object.keys(obj).map(key => `${key}: ${obj[key]}px`).join(';');
+}
 
+// queryString을 객체로 변환하는 함수
+function queryStringToObject(queryString) {
+  const obj = {};
+  const pairs = queryString.substring(1).split('&'); // '?'를 제외한 후 '&'로 분리
+
+  pairs.forEach(pair => {
+    const [key, value] = pair.split('=');
+    obj[decodeURIComponent(key)] = decodeURIComponent(value || ''); // 키와 값을 디코딩하여 객체에 저장
+  });
+
+  return obj;
+}
+
+// 객체를 queryString으로 변환하는 함수
+function objectToQueryString(obj) {
+  const queryString = Object.keys(obj)
+    .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(obj[key])}`)
+    .join('&');
+  return `?${queryString}`;
+}

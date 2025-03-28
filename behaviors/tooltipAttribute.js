@@ -45,42 +45,42 @@ export function enableTooltips() {
       switch (position) {
         case 'top':
           Object.assign(arrow.style, {
-            bottom: '-6px',
+            bottom: '-2px',
             left: '50%',
             transform: 'translateX(-50%)',
-            borderLeft: '6px solid transparent',
-            borderRight: '6px solid transparent',
-            borderTop: '6px solid #333',
+            borderLeft: '2px solid transparent',
+            borderRight: '2px solid transparent',
+            borderTop: '2px solid #333',
           });
           break;
         case 'bottom':
           Object.assign(arrow.style, {
-            top: '-6px',
+            top: '-2px',
             left: '50%',
             transform: 'translateX(-50%)',
-            borderLeft: '6px solid transparent',
-            borderRight: '6px solid transparent',
-            borderBottom: '6px solid #333',
+            borderLeft: '2px solid transparent',
+            borderRight: '2px solid transparent',
+            borderBottom: '2px solid #333',
           });
           break;
         case 'left':
           Object.assign(arrow.style, {
             top: '50%',
-            right: '-6px',
+            right: '-2px',
             transform: 'translateY(-50%)',
-            borderTop: '6px solid transparent',
-            borderBottom: '6px solid transparent',
-            borderLeft: '6px solid #333',
+            borderTop: '2px solid transparent',
+            borderBottom: '2px solid transparent',
+            borderLeft: '2px solid #333',
           });
           break;
         case 'right':
           Object.assign(arrow.style, {
             top: '50%',
-            left: '-6px',
+            left: '-2px',
             transform: 'translateY(-50%)',
-            borderTop: '6px solid transparent',
-            borderBottom: '6px solid transparent',
-            borderRight: '6px solid #333',
+            borderTop: '2px solid transparent',
+            borderBottom: '2px solid transparent',
+            borderRight: '2px solid #333',
           });
           break;
       }

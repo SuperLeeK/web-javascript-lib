@@ -1,4 +1,4 @@
-export function enableTooltips() {
+function enableTooltips() {
   const createTooltip = ({
     target,
     message,

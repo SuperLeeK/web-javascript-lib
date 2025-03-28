@@ -45,42 +45,42 @@ export function enableTooltips() {
       switch (position) {
         case 'top':
           Object.assign(arrow.style, {
-            bottom: '-2px',
+            bottom: '-6px',
             left: '50%',
             transform: 'translateX(-50%)',
-            borderLeft: '2px solid transparent',
-            borderRight: '2px solid transparent',
-            borderTop: '2px solid #333',
+            borderLeft: '6px solid transparent',
+            borderRight: '6px solid transparent',
+            borderTop: '6px solid #333',
           });
           break;
         case 'bottom':
           Object.assign(arrow.style, {
-            top: '-2px',
+            top: '-6px',
             left: '50%',
             transform: 'translateX(-50%)',
-            borderLeft: '2px solid transparent',
-            borderRight: '2px solid transparent',
-            borderBottom: '2px solid #333',
+            borderLeft: '6px solid transparent',
+            borderRight: '6px solid transparent',
+            borderBottom: '6px solid #333',
           });
           break;
         case 'left':
           Object.assign(arrow.style, {
             top: '50%',
-            right: '-2px',
+            right: '-6px',
             transform: 'translateY(-50%)',
-            borderTop: '2px solid transparent',
-            borderBottom: '2px solid transparent',
-            borderLeft: '2px solid #333',
+            borderTop: '6px solid transparent',
+            borderBottom: '6px solid transparent',
+            borderLeft: '6px solid #333',
           });
           break;
         case 'right':
           Object.assign(arrow.style, {
             top: '50%',
-            left: '-2px',
+            left: '-6px',
             transform: 'translateY(-50%)',
-            borderTop: '2px solid transparent',
-            borderBottom: '2px solid transparent',
-            borderRight: '2px solid #333',
+            borderTop: '6px solid transparent',
+            borderBottom: '6px solid transparent',
+            borderRight: '6px solid #333',
           });
           break;
       }
@@ -100,20 +100,20 @@ export function enableTooltips() {
 
       switch (position) {
         case 'top':
-          y = rect.top - 6 + scrollY;
+          y = rect.top - 0 + scrollY;
           tooltip.style.transform = motion === 'slide' ? 'translate(-50%, -120%)' : 'translate(-50%, -100%)';
           break;
         case 'bottom':
-          y = rect.bottom + 6 + scrollY;
+          y = rect.bottom + 0 + scrollY;
           tooltip.style.transform = motion === 'slide' ? 'translate(-50%, 20px)' : 'translate(-50%, 10px)';
           break;
         case 'left':
-          x = rect.left - 6 + scrollX;
+          x = rect.left - 0 + scrollX;
           y = rect.top + rect.height / 2 + scrollY;
           tooltip.style.transform = motion === 'slide' ? 'translate(-120%, -50%)' : 'translate(-105%, -50%)';
           break;
         case 'right':
-          x = rect.right + 6 + scrollX;
+          x = rect.right + 0 + scrollX;
           y = rect.top + rect.height / 2 + scrollY;
           tooltip.style.transform = motion === 'slide' ? 'translate(20%, -50%)' : 'translate(5%, -50%)';
           break;

@@ -4,6 +4,7 @@ const Panel = {
     buttons: [], // 2차원 배열 형태의 버튼 구성
     theme: {
       primary: '#00BCD4', // cyan 컬러
+      primaryHover: '#0097A7',
       background: '#FFFFFF',
       text: '#333333',
       border: '#E0E0E0'
@@ -121,17 +122,17 @@ const Panel = {
           button.style.borderRadius = '4px';
           button.style.border = 'none';
           button.style.cursor = 'pointer';
-          button.style.backgroundColor = 'transparent';
+          button.style.backgroundColor = this.config.theme.primary;
           button.style.transition = 'all 0.3s';
           button.style.color = this.config.theme.text;
           
           button.onmouseover = () => {
-            button.style.backgroundColor = this.config.theme.primary;
+            button.style.backgroundColor = this.config.theme.primaryHover;
             button.style.color = 'white';
           };
           
           button.onmouseout = () => {
-            button.style.backgroundColor = 'transparent';
+            button.style.backgroundColor = this.config.theme.primary;
             button.style.color = this.config.theme.text;
           };
           

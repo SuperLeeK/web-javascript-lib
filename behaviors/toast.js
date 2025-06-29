@@ -50,6 +50,21 @@ const Toast = {
         container.style.left = '50%';
         container.style.transform = 'translateX(-50%)';
         break;
+      case 'center-left':
+        container.style.left = '20px';
+        container.style.top = '50%';
+        container.style.transform = 'translateY(-50%)';
+        break;
+      case 'center-right':
+        container.style.right = '20px';
+        container.style.top = '50%';
+        container.style.transform = 'translateY(-50%)';
+        break;
+      case 'center':
+        container.style.left = '50%';
+        container.style.top = '50%';
+        container.style.transform = 'translate(-50%, -50%)';
+        break;
     }
 
     document.body.appendChild(container);

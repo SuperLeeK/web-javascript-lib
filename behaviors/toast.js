@@ -1,6 +1,15 @@
-
 // 토스트 메시지 유틸리티
 const Toast = {
+  // 기본 설정값 추가
+  config: {
+    position: 'bottom-right', // 'top-left', 'top-right', 'bottom-left', 'bottom-right', 'top-center', 'bottom-center'
+  },
+
+  // 토스트 초기화 함수 추가
+  init: function(options = {}) {
+    this.config = { ...this.config, ...options };
+  },
+
   // 토스트 컨테이너 생성
   createContainer: function() {
     if (document.getElementById('toast-container')) return;
@@ -8,12 +17,41 @@ const Toast = {
     const container = document.createElement('div');
     container.id = 'toast-container';
     container.style.position = 'fixed';
-    container.style.bottom = '20px';
-    container.style.right = '20px';
     container.style.zIndex = '9999';
     container.style.display = 'flex';
     container.style.flexDirection = 'column';
     container.style.gap = '10px';
+
+    // 위치에 따른 스타일 설정
+    switch(this.config.position) {
+      case 'top-left':
+        container.style.top = '20px';
+        container.style.left = '20px';
+        break;
+      case 'top-right':
+        container.style.top = '20px';
+        container.style.right = '20px';
+        break;
+      case 'bottom-left':
+        container.style.bottom = '20px';
+        container.style.left = '20px';
+        break;
+      case 'bottom-right':
+        container.style.bottom = '20px';
+        container.style.right = '20px';
+        break;
+      case 'top-center':
+        container.style.top = '20px';
+        container.style.left = '50%';
+        container.style.transform = 'translateX(-50%)';
+        break;
+      case 'bottom-center':
+        container.style.bottom = '20px';
+        container.style.left = '50%';
+        container.style.transform = 'translateX(-50%)';
+        break;
+    }
+
     document.body.appendChild(container);
   },
   

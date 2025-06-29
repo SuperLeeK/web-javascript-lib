@@ -1,6 +1,6 @@
 const Panel = {
   config: {
-    position: 'bottom-right', // 'top-left', 'top-right', 'bottom-left', 'bottom-right', 'top-center', 'bottom-center'
+    position: 'bottom-right', // 'top-left', 'top-right', 'bottom-left', 'bottom-right', 'top-center', 'bottom-center', 'center-left', 'center-right', 'center'
     buttons: [], // 2차원 배열 형태의 버튼 구성
     theme: {
       primary: '#00BCD4', // cyan 컬러
@@ -40,7 +40,7 @@ const Panel = {
     container.style.padding = this.config.layout.containerPadding;
     container.style.backgroundColor = this.config.theme.background;
     container.style.borderRadius = '8px';
-    container.style.boxShadow = '0 4px 12px rgba(255, 255, 255, 0.15)';
+    container.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
     container.style.display = 'flex';
     container.style.flexDirection = 'column';
     container.style.gap = this.config.layout.buttonGap;
@@ -72,6 +72,21 @@ const Panel = {
         container.style.bottom = '20px';
         container.style.left = '50%';
         container.style.transform = 'translateX(-50%)';
+        break;
+      case 'center-left':
+        container.style.left = '20px';
+        container.style.top = '50%';
+        container.style.transform = 'translateY(-50%)';
+        break;
+      case 'center-right':
+        container.style.right = '20px';
+        container.style.top = '50%';
+        container.style.transform = 'translateY(-50%)';
+        break;
+      case 'center':
+        container.style.left = '50%';
+        container.style.top = '50%';
+        container.style.transform = 'translate(-50%, -50%)';
         break;
     }
 

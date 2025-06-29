@@ -1,40 +1,66 @@
-const Panel = {
-  config: {
-    position: 'bottom-right', // 'top-left', 'top-right', 'bottom-left', 'bottom-right', 'top-center', 'bottom-center', 'center-left', 'center-right', 'center'
-    buttons: [], // 2차원 배열 형태의 버튼 구성
-    theme: {
-      primary: '#00BCD4', // cyan 컬러
-      primaryHover: '#0097A7',
-      background: '#FFFFFF',
-      text: '#333333',
-      border: '#E0E0E0'
-    },
-    layout: {
-      containerPadding: '16px',
-      buttonGap: '12px',
-      buttonHeight: '40px',
-      minButtonWidth: '100px'
-    }
-  },
+class Panel {
+  constructor(options = {}) {
+    // 기본 설정
+    this.config = {
+      position: {
+        type: 'bottom-right', // 'top-left', 'top-right', 'bottom-left', 'bottom-right', 'top-center', 'bottom-center', 'center-left', 'center-right', 'center'
+        style: {} // 추가 스타일 객체
+      },
+      buttons: [], // 2차원 배열 형태의 버튼 구성
+      theme: {
+        primary: '#00BCD4', // cyan 컬러
+        primaryHover: '#0097A7',
+        background: '#FFFFFF',
+        text: '#333333',
+        border: '#E0E0E0'
+      },
+      layout: {
+        containerPadding: '16px',
+        buttonGap: '12px',
+        buttonHeight: '40px',
+        minButtonWidth: '100px'
+      }
+    };
 
-  init: function(options = {}) {
+    // 설정 업데이트 메서드
+    this.updateConfig(options);
+
+    this.id = 'panel-' + Math.random().toString(36).substr(2, 9);
+    this.init();
+  }
+
+  // 설정 업데이트 메서드 추가
+  updateConfig(options = {}) {
     this.config = {
       ...this.config,
       ...options,
+      position: {
+        type: options.position?.type || this.config.position.type,
+        style: { ...this.config.position.style, ...(options.position?.style || {}) }
+      },
       theme: { ...this.config.theme, ...(options.theme || {}) },
       layout: { ...this.config.layout, ...(options.layout || {}) }
     };
+
+    // 설정이 변경되면 패널 다시 렌더링
+    if (document.getElementById(this.id)) {
+      this.init();
+    }
+  }
+
+  init() {
     this.createContainer();
     this.renderButtons();
-  },
+  }
 
-  createContainer: function() {
-    if (document.getElementById('panel-container')) {
-      document.body.removeChild(document.getElementById('panel-container'));
+  createContainer() {
+    const existingPanel = document.getElementById(this.id);
+    if (existingPanel) {
+      document.body.removeChild(existingPanel);
     }
     
     const container = document.createElement('div');
-    container.id = 'panel-container';
+    container.id = this.id;
     container.style.position = 'fixed';
     container.style.zIndex = '9998';
     container.style.padding = this.config.layout.containerPadding;
@@ -45,8 +71,8 @@ const Panel = {
     container.style.flexDirection = 'column';
     container.style.gap = this.config.layout.buttonGap;
 
-    // 위치 설정
-    switch(this.config.position) {
+    // 기본 위치 설정
+    switch(this.config.position.type) {
       case 'top-left':
         container.style.top = '20px';
         container.style.left = '20px';
@@ -90,25 +116,26 @@ const Panel = {
         break;
     }
 
-    document.body.appendChild(container);
-  },
+    // 추가 스타일 적용
+    Object.assign(container.style, this.config.position.style);
 
-  createButtonRow: function(rowItems) {
+    document.body.appendChild(container);
+  }
+
+  createButtonRow(rowItems) {
     const row = document.createElement('div');
     row.style.display = 'flex';
     row.style.gap = this.config.layout.buttonGap;
     row.style.justifyContent = 'flex-end';
 
-    rowItems.forEach(item => {
+    rowItems?.forEach(item => {
       const buttonContainer = document.createElement('div');
       buttonContainer.style.display = 'flex';
       buttonContainer.style.alignItems = 'center';
       buttonContainer.style.gap = '8px';
       buttonContainer.style.flex = 1;
       buttonContainer.style.width = 'auto';
-      // buttonContainer.style.border = '1px solid red';
       
-      // 타이틀
       if (item.title) {
         const title = document.createElement('div');
         title.textContent = item.title;
@@ -120,7 +147,6 @@ const Panel = {
         buttonContainer.appendChild(title);
       }
 
-      // 컨트롤 컨테이너
       const controlContainer = document.createElement('div');
       controlContainer.style.minWidth = this.config.layout.minButtonWidth;
       controlContainer.style.height = this.config.layout.buttonHeight;
@@ -129,6 +155,24 @@ const Panel = {
       controlContainer.style.justifyContent = 'flex-end';
 
       switch(item.type) {
+        case 'none':
+          const dummyContainer = document.createElement('div');
+          dummyContainer.style.width = '100%';
+          dummyContainer.style.height = '100%';
+          dummyContainer.style.display = 'flex';
+          dummyContainer.style.alignItems = 'center';
+          dummyContainer.style.justifyContent = 'flex-end';
+          
+          if (item.label) {
+            const span = document.createElement('span');
+            span.textContent = item.label;
+            span.style.color = this.config.theme.text;
+            dummyContainer.appendChild(span);
+          }
+          
+          controlContainer.appendChild(dummyContainer);
+          break;
+
         case 'button':
           const button = document.createElement('button');
           button.textContent = item.label || '';
@@ -244,10 +288,10 @@ const Panel = {
     });
 
     return row;
-  },
+  }
 
-  renderButtons: function() {
-    const container = document.getElementById('panel-container');
+  renderButtons() {
+    const container = document.getElementById(this.id);
     if (!container) return;
 
     container.innerHTML = '';
@@ -255,4 +299,11 @@ const Panel = {
       container.appendChild(this.createButtonRow(rowItems));
     });
   }
-}; 
+
+  destroy() {
+    const panel = document.getElementById(this.id);
+    if (panel) {
+      document.body.removeChild(panel);
+    }
+  }
+} 

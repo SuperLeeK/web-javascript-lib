@@ -81,20 +81,15 @@ const Panel = {
     const row = document.createElement('div');
     row.style.display = 'flex';
     row.style.gap = this.config.layout.buttonGap;
-    row.style.alignSelf = 'flex-end';
+    row.style.justifyContent = 'flex-end';
 
     rowItems.forEach(item => {
       const buttonContainer = document.createElement('div');
       buttonContainer.style.display = 'flex';
       buttonContainer.style.alignItems = 'center';
-      buttonContainer.style.justifyContent = 'flex-end';
       buttonContainer.style.gap = '8px';
       buttonContainer.style.width = 'auto';
-      buttonContainer.style.border = 'none';
-      buttonContainer.style.borderColor = 'transparent';
-      buttonContainer.style.backgroundColor = 'red';
       
-
       // 타이틀
       if (item.title) {
         const title = document.createElement('div');
@@ -111,9 +106,6 @@ const Panel = {
       controlContainer.style.height = this.config.layout.buttonHeight;
       controlContainer.style.display = 'flex';
       controlContainer.style.alignItems = 'center';
-      controlContainer.style.justifyContent = 'flex-end';
-      controlContainer.style.border = 'none';
-      controlContainer.style.borderColor = 'transparent';
 
       switch(item.type) {
         case 'button':
@@ -127,7 +119,6 @@ const Panel = {
           button.style.backgroundColor = 'transparent';
           button.style.transition = 'all 0.3s';
           button.style.color = this.config.theme.text;
-          button.style.justifyContent = 'flex-end';
           
           button.onmouseover = () => {
             button.style.backgroundColor = this.config.theme.primary;
@@ -150,17 +141,16 @@ const Panel = {
           toggleContainer.style.display = 'flex';
           toggleContainer.style.alignItems = 'center';
           toggleContainer.style.padding = '0 8px';
-          toggleContainer.style.border = 'none';
+          toggleContainer.style.borderRadius = '4px';
           
           const toggle = document.createElement('div');
           toggle.style.position = 'relative';
           toggle.style.width = '52px';
           toggle.style.height = '28px';
-          toggle.style.backgroundColor = '#E0E0E0';
+          toggle.style.backgroundColor = '#ddd';
           toggle.style.borderRadius = '14px';
           toggle.style.cursor = 'pointer';
           toggle.style.transition = 'background-color 0.3s';
-          toggle.style.border = 'none';
           
           const slider = document.createElement('div');
           slider.style.position = 'absolute';
@@ -171,8 +161,7 @@ const Panel = {
           slider.style.top = '2px';
           slider.style.left = '2px';
           slider.style.transition = 'left 0.3s';
-          slider.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
-          slider.style.border = 'none';
+          slider.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
           
           toggle.appendChild(slider);
           toggleContainer.appendChild(toggle);
@@ -181,7 +170,7 @@ const Panel = {
           let isToggled = false;
           toggle.onclick = () => {
             isToggled = !isToggled;
-            toggle.style.backgroundColor = isToggled ? this.config.theme.primary : '#E0E0E0';
+            toggle.style.backgroundColor = isToggled ? this.config.theme.primary : '#ddd';
             slider.style.left = isToggled ? '26px' : '2px';
             if (item.onChange) item.onChange(isToggled);
           };

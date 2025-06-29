@@ -12,7 +12,7 @@ const Panel = {
       containerPadding: '16px',
       buttonGap: '12px',
       buttonHeight: '40px',
-      minButtonWidth: '140px'
+      minButtonWidth: '100px'
     }
   },
 
@@ -87,15 +87,18 @@ const Panel = {
       const buttonContainer = document.createElement('div');
       buttonContainer.style.display = 'flex';
       buttonContainer.style.alignItems = 'center';
-      buttonContainer.style.justifyContent = 'flex-end';
       buttonContainer.style.gap = '8px';
+      buttonContainer.style.flex = 1;
       buttonContainer.style.width = 'auto';
+      // buttonContainer.style.border = '1px solid red';
       
       // 타이틀
       if (item.title) {
         const title = document.createElement('div');
         title.textContent = item.title;
-        title.style.fontSize = '14px';
+        title.style.marginLeft = '16px';
+        title.style.fontSize = '18px';
+        title.style.fontWeight = 'bold';
         title.style.color = this.config.theme.text;
         title.style.whiteSpace = 'nowrap';
         buttonContainer.appendChild(title);

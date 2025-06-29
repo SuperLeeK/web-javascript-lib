@@ -142,6 +142,7 @@ const Panel = {
           toggleContainer.style.height = '100%';
           toggleContainer.style.display = 'flex';
           toggleContainer.style.alignItems = 'center';
+          toggleContainer.style.justifyContent = 'flex-end';
           toggleContainer.style.padding = '0 8px';
           toggleContainer.style.border = 'none';
           

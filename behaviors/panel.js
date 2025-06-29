@@ -87,6 +87,7 @@ const Panel = {
       const buttonContainer = document.createElement('div');
       buttonContainer.style.display = 'flex';
       buttonContainer.style.alignItems = 'center';
+      buttonContainer.style.justifyContent = 'flex-end';
       buttonContainer.style.gap = '8px';
       buttonContainer.style.width = 'auto';
       
@@ -106,6 +107,7 @@ const Panel = {
       controlContainer.style.height = this.config.layout.buttonHeight;
       controlContainer.style.display = 'flex';
       controlContainer.style.alignItems = 'center';
+      controlContainer.style.justifyContent = 'flex-end';
 
       switch(item.type) {
         case 'button':
@@ -141,16 +143,17 @@ const Panel = {
           toggleContainer.style.display = 'flex';
           toggleContainer.style.alignItems = 'center';
           toggleContainer.style.padding = '0 8px';
-          toggleContainer.style.borderRadius = '4px';
+          toggleContainer.style.border = 'none';
           
           const toggle = document.createElement('div');
           toggle.style.position = 'relative';
           toggle.style.width = '52px';
           toggle.style.height = '28px';
-          toggle.style.backgroundColor = '#ddd';
+          toggle.style.backgroundColor = '#E0E0E0';
           toggle.style.borderRadius = '14px';
           toggle.style.cursor = 'pointer';
           toggle.style.transition = 'background-color 0.3s';
+          toggle.style.border = 'none';
           
           const slider = document.createElement('div');
           slider.style.position = 'absolute';
@@ -161,7 +164,8 @@ const Panel = {
           slider.style.top = '2px';
           slider.style.left = '2px';
           slider.style.transition = 'left 0.3s';
-          slider.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+          slider.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+          slider.style.border = 'none';
           
           toggle.appendChild(slider);
           toggleContainer.appendChild(toggle);
@@ -170,7 +174,7 @@ const Panel = {
           let isToggled = false;
           toggle.onclick = () => {
             isToggled = !isToggled;
-            toggle.style.backgroundColor = isToggled ? this.config.theme.primary : '#ddd';
+            toggle.style.backgroundColor = isToggled ? this.config.theme.primary : '#E0E0E0';
             slider.style.left = isToggled ? '26px' : '2px';
             if (item.onChange) item.onChange(isToggled);
           };

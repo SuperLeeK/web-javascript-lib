@@ -89,7 +89,7 @@ class API {
   async _request(method, endpoint, body = null, params = {}) {
     try {
       // URL 구성
-      let url = this.baseURL + endpoint;
+      let url = `${this.baseURL}/${endpoint}`.replace('//', '/');
 
       // 쿼리 파라미터 추가
       if (Object.keys(params).length > 0) {

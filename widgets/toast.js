@@ -171,4 +171,4 @@ const Toast = {
   info: function(message, duration = 3000) {
     return this.show(message, 'info', duration);
   }
-};
+}; 

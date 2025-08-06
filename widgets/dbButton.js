@@ -1,11 +1,3 @@
-// ==UserScript==
-// @name         DB Button Widget
-// @namespace    Widget
-// @version      1.0.0
-// @description  Download and Check button widget for database operations
-// @author       You
-// ==/UserScript==
-
 const dbButton = (() => {
   // 스타일 주입 함수
   const injectStyles = () => {

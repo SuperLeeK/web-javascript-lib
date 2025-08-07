@@ -195,10 +195,36 @@ const dbButton = (() => {
     return container;
   };
 
+  // 부모 요소 처리 함수
+  const getParentElement = (parentInput) => {
+    if (typeof parentInput === 'string') {
+      // 문자열이면 selector로 처리
+      const element = document.querySelector(parentInput);
+      if (!element) {
+        console.error(`Element not found with selector: ${parentInput}`);
+        return null;
+      }
+      return element;
+    } else if (parentInput instanceof Element) {
+      // Element 객체면 그대로 사용
+      return parentInput;
+    } else {
+      console.error('Invalid parent input. Expected string (selector) or Element.');
+      return null;
+    }
+  };
+
   // 메인 함수
-  const create = (parentElement, downloadOnClick = null, checkOnClick = null) => {
+  const create = (parentInput, downloadOnClick = null, checkOnClick = null) => {
     // 스타일 주입
     injectStyles();
+    
+    // 부모 요소 처리
+    const parentElement = getParentElement(parentInput);
+    if (!parentElement) {
+      console.error('Failed to get parent element');
+      return null;
+    }
     
     // 컨테이너 생성
     const container = createContainer(parentElement);

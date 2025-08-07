@@ -184,24 +184,36 @@ const dbButton = (() => {
   }
 
   // 컨테이너 생성 함수
-  const createContainer = (parentElement) => {
+  const createContainer = (thumbnailElement) => {
     const container = document.createElement('div');
     container.className = 'download-button-container';
     
-    if (parentElement) {
-      parentElement.appendChild(container);
+    // 썸네일 요소에 컨테이너 추가
+    if (thumbnailElement) {
+      // 썸네일 요소가 relative 포지션을 가지도록 설정
+      if (getComputedStyle(thumbnailElement).position === 'static') {
+        thumbnailElement.style.position = 'relative';
+      }
+      thumbnailElement.appendChild(container);
     }
     
     return container;
   };
 
   // 메인 함수
-  const create = (parentElement, downloadOnClick = null, checkOnClick = null) => {
+  const create = (thumbnailSelector, downloadOnClick = null, checkOnClick = null) => {
     // 스타일 주입
     injectStyles();
     
+    // 썸네일 요소 찾기
+    const thumbnailElement = document.querySelector(thumbnailSelector);
+    if (!thumbnailElement) {
+      console.error(`Thumbnail element not found with selector: ${thumbnailSelector}`);
+      return null;
+    }
+    
     // 컨테이너 생성
-    const container = createContainer(parentElement);
+    const container = createContainer(thumbnailElement);
     
     // 버튼들 생성
     const downloadButton = new DownloadButton(container, downloadOnClick);
@@ -210,7 +222,8 @@ const dbButton = (() => {
     return {
       downloadButton,
       checkButton,
-      container
+      container,
+      thumbnailElement
     };
   };
 

@@ -1,4 +1,49 @@
 const dbButton = (() => {
+  // 전역 모달 인스턴스
+  let globalModal = null;
+
+  // 전역 모달 생성 함수
+  const createGlobalModal = () => {
+    const modal = document.createElement('div');
+    modal.className = 'download-modal';
+
+    const title = document.createElement('div');
+    title.style.marginBottom = '15px';
+    title.style.fontSize = '16px';
+    modal.appendChild(title);
+
+    const progress = document.createElement('div');
+    progress.className = 'download-progress';
+    modal.appendChild(progress);
+
+    const progressBar = document.createElement('div');
+    progressBar.className = 'progress-bar';
+    const progressBarFill = document.createElement('div');
+    progressBarFill.className = 'progress-bar-fill';
+    progressBar.appendChild(progressBarFill);
+    modal.appendChild(progressBar);
+
+    document.body.appendChild(modal);
+
+    return {
+      show: (titleText) => {
+        title.textContent = titleText;
+        modal.style.display = 'block';
+      },
+      hide: () => {
+        modal.style.display = 'none';
+        progressBarFill.style.width = '0%';
+        progress.textContent = '';
+        title.textContent = '';
+      },
+      updateProgress: (current, total) => {
+        const percent = (current / total) * 100;
+        progress.textContent = `다운로드 중... (${current}/${total})`;
+        progressBarFill.style.width = `${percent}%`;
+      }
+    };
+  };
+
   // 스타일 주입 함수
   const injectStyles = () => {
     if (document.querySelector('#db-button-styles')) return;
@@ -86,6 +131,43 @@ const dbButton = (() => {
       .check-button.disabled:hover {
         transform: none;
         box-shadow: none;
+      }
+
+      /* 다운로드 모달 스타일 */
+      .download-modal {
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        background: rgba(0, 0, 0, 0.9);
+        padding: 20px;
+        border-radius: 8px;
+        color: white;
+        min-width: 300px;
+        text-align: center;
+        z-index: 99999;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        display: none;
+      }
+
+      .download-progress {
+        margin: 15px 0;
+        font-size: 14px;
+      }
+
+      .progress-bar {
+        width: 100%;
+        height: 4px;
+        background: #333;
+        border-radius: 2px;
+        margin: 10px 0;
+      }
+
+      .progress-bar-fill {
+        height: 100%;
+        background: #00ff00;
+        border-radius: 2px;
+        transition: width 0.3s ease;
+        width: 0%;
       }
     `;
     document.head.appendChild(style);
@@ -184,17 +266,12 @@ const dbButton = (() => {
   }
 
   // 컨테이너 생성 함수
-  const createContainer = (thumbnailElement) => {
+  const createContainer = (parentElement) => {
     const container = document.createElement('div');
     container.className = 'download-button-container';
     
-    // 썸네일 요소에 컨테이너 추가
-    if (thumbnailElement) {
-      // 썸네일 요소가 relative 포지션을 가지도록 설정
-      if (getComputedStyle(thumbnailElement).position === 'static') {
-        thumbnailElement.style.position = 'relative';
-      }
-      thumbnailElement.appendChild(container);
+    if (parentElement) {
+      parentElement.appendChild(container);
     }
     
     return container;
@@ -224,6 +301,11 @@ const dbButton = (() => {
     // 스타일 주입
     injectStyles();
     
+    // 전역 모달 초기화 (한 번만)
+    if (!globalModal) {
+      globalModal = createGlobalModal();
+    }
+    
     // 부모 요소 처리
     const parentElement = getParentElement(parentInput);
     if (!parentElement) {
@@ -232,7 +314,7 @@ const dbButton = (() => {
     }
     
     // 컨테이너 생성
-    const container = createContainer(thumbnailElement);
+    const container = createContainer(parentElement);
     
     // 버튼들 생성
     const downloadButton = new DownloadButton(container, downloadOnClick);
@@ -242,14 +324,15 @@ const dbButton = (() => {
       downloadButton,
       checkButton,
       container,
-      thumbnailElement
+      modal: globalModal  // 모달 인스턴스도 함께 반환
     };
   };
 
   return {
     create,
     DownloadButton,
-    CheckButton
+    CheckButton,
+    getModal: () => globalModal  // 모달 인스턴스에 접근할 수 있는 메서드
   };
 })();
 

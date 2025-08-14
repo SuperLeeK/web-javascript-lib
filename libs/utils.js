@@ -37,3 +37,21 @@ function objectToQueryString(obj) {
     .join('&');
   return `?${queryString}`;
 }
+
+function runWhenReady(readySelector, callback) {
+  var numAttempts = 0;
+  var tryNow = function() {
+      var elem = document.querySelector(readySelector);
+      if (elem) {
+          callback(elem);
+      } else {
+          numAttempts++;
+          if (numAttempts >= 34) {
+              console.warn('Giving up after 34 attempts. Could not find: ' + readySelector);
+          } else {
+              setTimeout(tryNow, 250 * Math.pow(1.1, numAttempts));
+          }
+      }
+  };
+  tryNow();
+}

@@ -38,7 +38,7 @@ function objectToQueryString(obj) {
   return `?${queryString}`;
 }
 
-function waitFor(condition, callback) {
+async function waitFor(condition, callback) {
   if (condition()) {
     callback();
   } else {
@@ -46,11 +46,11 @@ function waitFor(condition, callback) {
   }
 }
 
-function waitForSeconds(seconds, callback) {
+async function waitForSeconds(seconds, callback) {
   setTimeout(callback, seconds * 1000);
 }
 
-function waitForSelector(readySelector, callback) {
+async function waitForSelector(readySelector, callback) {
   var numAttempts = 0;
   var tryNow = function () {
     var elem = document.querySelector(readySelector);

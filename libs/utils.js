@@ -38,11 +38,19 @@ function objectToQueryString(obj) {
   return `?${queryString}`;
 }
 
-async function waitFor(condition, callback) {
-  if (condition()) {
-    callback();
+async function waitFor(condition, callback, interval = 100) {
+  if (typeof condition === 'function') {
+    if (condition()) {
+      callback?.();
+      return;
+    } else {
+      setTimeout(waitFor, interval, condition, callback);
+    }
+  } else if (condition) {
+    callback?.();
+    return;
   } else {
-    setTimeout(waitFor, 100, condition, callback);
+    setTimeout(waitFor, interval, condition, callback);
   }
 }
 
@@ -55,7 +63,7 @@ async function waitForSelector(readySelector, callback) {
   var tryNow = function () {
     var elem = document.querySelector(readySelector);
     if (elem) {
-      callback(elem);
+      callback?.(elem);
     } else {
       numAttempts++;
       if (numAttempts >= 34) {

@@ -58,7 +58,7 @@ async function waitForSeconds(seconds, callback) {
   setTimeout(callback, seconds * 1000);
 }
 
-async function waitForSelector(readySelector, callback) {
+async function waitForSelector(readySelector, callback, targetNumAttempts = 34) {
   var numAttempts = 0;
   var tryNow = function () {
     var elem = document.querySelector(readySelector);
@@ -66,8 +66,9 @@ async function waitForSelector(readySelector, callback) {
       callback?.(elem);
     } else {
       numAttempts++;
-      if (numAttempts >= 34) {
+      if (numAttempts >= targetNumAttempts) {
         console.warn('Giving up after 34 attempts. Could not find: ' + readySelector);
+        throw new Error('Could not find: ' + readySelector);
       } else {
         setTimeout(tryNow, 250 * Math.pow(1.1, numAttempts));
       }

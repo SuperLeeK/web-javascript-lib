@@ -100,7 +100,7 @@
    * @param {{concurrency?:number}} [options]
    * @param {(p:{current:number,total:number,percent:number})=>void} [onProgress]
    */
-  async function download(urls, folderName, { concurrency = 4 } = {}, onProgress) {
+  async function download(urls, folderName, { concurrency = 1 } = {}, onProgress) {
     assertEnv();
 
     const list = normalizeUrls(urls);

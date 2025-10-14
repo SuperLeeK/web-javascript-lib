@@ -35,13 +35,26 @@
     return null;
   };
 
-  function fetchArrayBuffer(url, fallbackName) {
+  function fetchArrayBuffer(url, fallbackName, reqOpt = {}) {
+    const {
+      referer = location.href,          // 기본은 현재 페이지
+      headers = {},                     // 추가 헤더
+      anonymous = false,                // true면 쿠키/자격증명 제거
+      timeout = 120000,
+    } = reqOpt;
+  
     return new Promise((resolve, reject) => {
       GM_xmlhttpRequest({
         method: 'GET',
         url,
         responseType: 'arraybuffer',
-        timeout: 120000,
+        timeout,
+        // Tampermonkey 전용 옵션: referer 헤더 지정
+        referer,                       // <— 중요 (일부 사이트는 꼭 필요)
+        // 일반 헤더들
+        headers,
+        // 익명 모드: true면 쿠키/자격증명 미포함
+        anonymous,
         onload: (res) => {
           if (res.status >= 200 && res.status < 300 && res.response) {
             const cdHeaderLine = res.responseHeaders
@@ -54,11 +67,15 @@
               filename: nameFromCD || fallbackName || inferFilenameFromUrl(url),
             });
           } else {
+            console.error('[useDownload] HTTP fail', {
+              url, status: res.status, statusText: res.statusText,
+              headers: res.responseHeaders?.split(/\r?\n/).slice(0,8)
+            });
             reject(new Error(`HTTP ${res.status} for ${url}`));
           }
         },
-        onerror: () => reject(new Error(`Network error for ${url}`)),
-        ontimeout: () => reject(new Error(`Timeout for ${url}`)),
+        onerror: (e) => { console.error('[useDownload] network error', url, e); reject(new Error(`Network error for ${url}`)); },
+        ontimeout: () => { console.error('[useDownload] timeout', url); reject(new Error(`Timeout for ${url}`)); },
       });
     });
   }
@@ -100,7 +117,7 @@
    * @param {{concurrency?:number}} [options]
    * @param {(p:{current:number,total:number,percent:number})=>void} [onProgress]
    */
-  async function download(urls, folderName, { concurrency = 1 } = {}, onProgress) {
+  async function download(urls, folderName, { concurrency = 1, request } = {}, onProgress) {
     assertEnv();
 
     const list = normalizeUrls(urls);
@@ -125,7 +142,7 @@
 
     const results = await mapWithConcurrency(
       list,
-      (item) => fetchArrayBuffer(item.url, item.filename && sanitize(item.filename)),
+      (item) => fetchArrayBuffer(item.url, item.filename && sanitize(item.filename), request),
       concurrency,
       (done) => reportFetch(done)
     );

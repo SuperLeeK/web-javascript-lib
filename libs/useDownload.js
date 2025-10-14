@@ -63,7 +63,7 @@
     });
   }
 
-  async function mapWithConcurrency(items, worker, concurrency = 4, onEachDone) {
+  async function mapWithConcurrency(items, worker, concurrency = 1, onEachDone) {
     let i = 0, active = 0, done = 0;
     const results = new Array(items.length);
     return new Promise((resolve) => {

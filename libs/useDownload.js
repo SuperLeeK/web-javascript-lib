@@ -1,6 +1,6 @@
 /*!
  * useDownload.js
- * version: 1.2.0
+ * version: 1.3.0
  * deps: JSZip (global), Toast (global Toast.success / Toast.error)
  * env: Tampermonkey/Greasemonkey (GM_xmlhttpRequest, GM_download)
  */
@@ -63,7 +63,7 @@
     });
   }
 
-  async function mapWithConcurrency(items, worker, concurrency = 4) {
+  async function mapWithConcurrency(items, worker, concurrency = 4, onEachDone) {
     let i = 0, active = 0, done = 0;
     const results = new Array(items.length);
     return new Promise((resolve) => {
@@ -76,6 +76,7 @@
             .catch(err => { results[idx] = { ok: false, err }; })
             .finally(() => {
               active--; done++;
+              try { onEachDone && onEachDone(done, items.length); } catch {}
               if (done === items.length) resolve(results);
               else pump();
             });
@@ -95,12 +96,11 @@
 
   /**
    * @param {Array<string|{url:string, filename?:string}>} urls
-   * @param {string} folderName  - ZIP 파일명과 내부 폴더명을 동시에 사용
-   *    - zipName = `${folderName}.zip`
-   *    - inside path = `${folderName}/<files>`
-   * @param {{concurrency?:number}} [options]  // 선택: 동시 다운로드 수 (기본 4)
+   * @param {string} folderName  - zipName = `${folderName}.zip`, 내부 폴더도 동일 이름
+   * @param {{concurrency?:number}} [options]
+   * @param {(p:{current:number,total:number,percent:number})=>void} [onProgress]
    */
-  async function download(urls, folderName, { concurrency = 4 } = {}) {
+  async function download(urls, folderName, { concurrency = 4 } = {}, onProgress) {
     assertEnv();
 
     const list = normalizeUrls(urls);
@@ -113,11 +113,21 @@
     const safeFolder = sanitize(folderName || 'download');
     const zipName = `${safeFolder}.zip`;
 
-    // 1) fetch all
+    // 1) fetch all — 파일 단위 진행률
+    const totalFetch = list.length;
+    const reportFetch = (done) => {
+      if (typeof onProgress === 'function') {
+        const percent = totalFetch ? (done / totalFetch) * 100 : 100;
+        try { onProgress({ current: done, total: totalFetch, percent }); } catch {}
+      }
+    };
+    reportFetch(0);
+
     const results = await mapWithConcurrency(
       list,
       (item) => fetchArrayBuffer(item.url, item.filename && sanitize(item.filename)),
-      concurrency
+      concurrency,
+      (done) => reportFetch(done)
     );
 
     const successes = results
@@ -125,7 +135,6 @@
       .filter(x => x.r?.ok)
       .map(x => ({
         arrayBuffer: x.r.val.arrayBuffer,
-        // 우선순위: caller filename > Content-Disposition/URL
         filename: sanitize(x.item.filename || x.r.val.filename),
         srcUrl: x.item.url
       }));
@@ -140,11 +149,10 @@
       throw new Error(msg);
     }
 
-    // 2) ZIP
+    // 2) ZIP — 압축 진행률 (0~100)
     const zip = new JSZip();
-    const dir = zip.folder(safeFolder); // 내부 폴더도 동일 이름
+    const dir = zip.folder(safeFolder);
     const used = new Set();
-
     const ensureUnique = (name) => {
       let n = 1;
       let base = name, ext = '';
@@ -155,17 +163,26 @@
       used.add(cur);
       return cur;
     };
-
     successes.forEach(({ arrayBuffer, filename }) => {
       const unique = ensureUnique(filename);
       dir.file(unique, arrayBuffer);
     });
 
-    const blob = await zip.generateAsync({ type: 'blob' });
+    const blob = await zip.generateAsync({ type: 'blob' }, (meta) => {
+      if (typeof onProgress === 'function') {
+        const p = Math.max(0, Math.min(100, meta.percent || 0));
+        try { onProgress({ current: Math.round(p), total: 100, percent: p }); } catch {}
+      }
+    });
 
-    // 3) save once
+    // 3) save once — 완료 알림
     const objUrl = URL.createObjectURL(blob);
     try {
+      // 저장 직전 100% 한 번 보냄 (zip 단계가 이미 100 찍었으면 중복일 수 있음)
+      if (typeof onProgress === 'function') {
+        try { onProgress({ current: 100, total: 100, percent: 100 }); } catch {}
+      }
+
       await new Promise((resolve, reject) => {
         GM_download({
           url: objUrl,
@@ -191,7 +208,7 @@
     }
   }
 
-  const api = { download, version: '1.2.0' };
+  const api = { download, version: '1.3.0' };
   if (typeof window !== 'undefined') window.useDownload = api;
   if (typeof unsafeWindow !== 'undefined') unsafeWindow.useDownload = api;
 })();

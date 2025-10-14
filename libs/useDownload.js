@@ -1,22 +1,16 @@
 /*!
  * useDownload.js
- * version: 1.0.0
- * dependency: JSZip (global JSZip), Toast (global Toast.success / Toast.error)
- * environment: Tampermonkey/Greasemonkey (GM_xmlhttpRequest, GM_download available)
+ * version: 1.1.0
+ * deps: JSZip (global), Toast (global Toast.success / Toast.error)
+ * env: Tampermonkey/Greasemonkey (GM_xmlhttpRequest, GM_download)
  */
 (function () {
   'use strict';
 
   function assertEnv() {
-    if (typeof JSZip === 'undefined') {
-      throw new Error('JSZip 이 로드되지 않았습니다. (userscript에 @require jszip 추가 필요)');
-    }
-    if (typeof GM_xmlhttpRequest !== 'function') {
-      throw new Error('GM_xmlhttpRequest 를 사용할 수 없습니다. (userscript에 @grant GM_xmlhttpRequest 필요)');
-    }
-    if (typeof GM_download !== 'function') {
-      throw new Error('GM_download 를 사용할 수 없습니다. (userscript에 @grant GM_download 필요)');
-    }
+    if (typeof JSZip === 'undefined') throw new Error('JSZip 미로드 (@require jszip 필요)');
+    if (typeof GM_xmlhttpRequest !== 'function') throw new Error('GM_xmlhttpRequest 불가 (@grant 필요)');
+    if (typeof GM_download !== 'function') throw new Error('GM_download 불가 (@grant 필요)');
   }
 
   const sanitizeFilename = (name) =>
@@ -41,7 +35,7 @@
     return null;
   };
 
-  function fetchArrayBuffer(url) {
+  function fetchArrayBuffer(url, fallbackName) {
     return new Promise((resolve, reject) => {
       GM_xmlhttpRequest({
         method: 'GET',
@@ -57,7 +51,8 @@
             const nameFromCD = parseFilenameFromContentDisposition(cdVal);
             resolve({
               arrayBuffer: res.response,
-              filename: nameFromCD || inferFilenameFromUrl(url),
+              // 헤더 > 지정명 > URL 추론
+              filename: nameFromCD || fallbackName || inferFilenameFromUrl(url),
             });
           } else {
             reject(new Error(`HTTP ${res.status} for ${url}`));
@@ -91,10 +86,27 @@
     });
   }
 
-  async function download(urls, zipName, { concurrency = 4 } = {}) {
+  // 입력 정규화: string[] | {url, filename?}[] -> {url, filename?}[]
+  function normalizeUrls(urls) {
+    if (!Array.isArray(urls)) return [];
+    if (urls.length === 0) return [];
+    if (typeof urls[0] === 'string') {
+      return urls.map(u => ({ url: u }));
+    }
+    // 얕은 검증
+    return urls.map(x => ({ url: String(x.url), filename: x.filename ? String(x.filename) : undefined }));
+  }
+
+  /**
+   * @param {Array<string|{url:string, filename?:string}>} urls
+   * @param {string} zipName - 저장할 ZIP 파일명
+   * @param {{concurrency?:number, folderName?:string}} [options]
+   */
+  async function download(urls, zipName, { concurrency = 4, folderName } = {}) {
     assertEnv();
 
-    if (!Array.isArray(urls) || urls.length === 0) {
+    const list = normalizeUrls(urls);
+    if (!list.length) {
       const msg = 'urls 가 비어있습니다.';
       if (typeof Toast?.error === 'function') Toast.error(msg);
       throw new Error(msg);
@@ -104,36 +116,54 @@
       zipName?.endsWith('.zip') ? zipName : `${zipName || 'download'}.zip`
     );
 
-    // 1) fetch all with concurrency
-    const results = await mapWithConcurrency(urls, (u) => fetchArrayBuffer(u), concurrency);
+    // 1) fetch all
+    const results = await mapWithConcurrency(
+      list,
+      (item) => fetchArrayBuffer(item.url, item.filename && sanitizeFilename(item.filename)),
+      concurrency
+    );
 
     const successes = results
-      .map((r, i) => ({ r, url: urls[i] }))
+      .map((r, i) => ({ r, item: list[i] }))
       .filter(x => x.r?.ok)
-      .map(x => ({ ...x.r.val, srcUrl: x.url }));
+      .map(x => ({
+        arrayBuffer: x.r.val.arrayBuffer,
+        // 우선순위: caller filename > Content-Disposition/URL
+        filename: sanitizeFilename(x.item.filename || x.r.val.filename),
+        srcUrl: x.item.url
+      }));
 
     const failures = results
-      .map((r, i) => ({ r, url: urls[i] }))
+      .map((r, i) => ({ r, item: list[i] }))
       .filter(x => !x.r?.ok);
 
-    if (successes.length === 0) {
-      const msg = '모든 다운로드가 실패했습니다. (@connect 도메인을 확인하세요)';
+    if (!successes.length) {
+      const msg = '모든 다운로드가 실패했습니다. (@connect 도메인/권한 확인)';
       if (typeof Toast?.error === 'function') Toast.error(msg);
       throw new Error(msg);
     }
 
-    // 2) zip
+    // 2) ZIP
     const zip = new JSZip();
-    successes.forEach(({ arrayBuffer, filename }) => {
-      let name = filename;
+    const dir = folderName ? zip.folder(sanitizeFilename(folderName)) : zip;
+    const used = new Set();
+
+    const ensureUnique = (name) => {
       let n = 1;
-      while (zip.file(name)) {
-        const dot = name.lastIndexOf('.');
-        const base = dot >= 0 ? name.slice(0, dot) : name;
-        const ext  = dot >= 0 ? name.slice(dot) : '';
-        name = `${base} (${n++})${ext}`;
+      let base = name, ext = '';
+      const dot = name.lastIndexOf('.');
+      if (dot >= 0) { base = name.slice(0, dot); ext = name.slice(dot); }
+      let cur = name;
+      while (used.has(cur)) {
+        cur = `${base} (${n++})${ext}`;
       }
-      zip.file(name, arrayBuffer);
+      used.add(cur);
+      return cur;
+    };
+
+    successes.forEach(({ arrayBuffer, filename }) => {
+      const unique = ensureUnique(filename);
+      dir.file(unique, arrayBuffer);
     });
 
     const blob = await zip.generateAsync({ type: 'blob' });
@@ -156,9 +186,9 @@
         ? `완료: ${finalZip} (성공 ${successes.length} / 실패 ${failures.length})`
         : `완료: ${finalZip} (총 ${successes.length}개)`;
       if (typeof Toast?.success === 'function') Toast.success(okMsg);
-      if (failures.length) console.warn('실패 URL:', failures.map(f => f.url));
+      if (failures.length) console.warn('실패 URL:', failures.map(f => f.item.url));
     } catch (e) {
-      const errMsg = `ZIP 저장 중 오류: ${e?.message || e}`;
+      const errMsg = `ZIP 저장 오류: ${e?.message || e}`;
       if (typeof Toast?.error === 'function') Toast.error(errMsg);
       throw e;
     } finally {
@@ -166,14 +196,7 @@
     }
   }
 
-  // 공개 API
-  const api = { download, version: '1.0.0' };
-
-  // 전역 노출
-  if (typeof window !== 'undefined') {
-    window.useDownload = api;
-  }
-  if (typeof unsafeWindow !== 'undefined') {
-    unsafeWindow.useDownload = api;
-  }
+  const api = { download, version: '1.1.0' };
+  if (typeof window !== 'undefined') window.useDownload = api;
+  if (typeof unsafeWindow !== 'undefined') unsafeWindow.useDownload = api;
 })();

@@ -1,6 +1,6 @@
 /*!
  * useDownload.js
- * version: 1.1.0
+ * version: 1.2.0
  * deps: JSZip (global), Toast (global Toast.success / Toast.error)
  * env: Tampermonkey/Greasemonkey (GM_xmlhttpRequest, GM_download)
  */
@@ -13,25 +13,25 @@
     if (typeof GM_download !== 'function') throw new Error('GM_download 불가 (@grant 필요)');
   }
 
-  const sanitizeFilename = (name) =>
+  const sanitize = (name) =>
     (name || 'file').replace(/[\\/:*?"<>|]/g, '_').trim() || 'file';
 
   const inferFilenameFromUrl = (url) => {
     try {
       const u = new URL(url, location.href);
       const last = u.pathname.split('/').filter(Boolean).pop() || 'file';
-      return sanitizeFilename(decodeURIComponent(last));
+      return sanitize(decodeURIComponent(last));
     } catch { return 'file'; }
   };
 
   const parseFilenameFromContentDisposition = (value) => {
     if (!value) return null;
     const utf8 = /filename\*\s*=\s*UTF-8''([^;]+)/i.exec(value);
-    if (utf8) return sanitizeFilename(decodeURIComponent(utf8[1]));
+    if (utf8) return sanitize(decodeURIComponent(utf8[1]));
     const quoted = /filename\s*=\s*"([^"]+)"/i.exec(value);
-    if (quoted) return sanitizeFilename(quoted[1]);
+    if (quoted) return sanitize(quoted[1]);
     const bare = /filename\s*=\s*([^;]+)/i.exec(value);
-    if (bare) return sanitizeFilename(bare[1]);
+    if (bare) return sanitize(bare[1]);
     return null;
   };
 
@@ -51,7 +51,6 @@
             const nameFromCD = parseFilenameFromContentDisposition(cdVal);
             resolve({
               arrayBuffer: res.response,
-              // 헤더 > 지정명 > URL 추론
               filename: nameFromCD || fallbackName || inferFilenameFromUrl(url),
             });
           } else {
@@ -86,23 +85,22 @@
     });
   }
 
-  // 입력 정규화: string[] | {url, filename?}[] -> {url, filename?}[]
+  // string[] | {url, filename?}[] -> {url, filename?}[]
   function normalizeUrls(urls) {
     if (!Array.isArray(urls)) return [];
     if (urls.length === 0) return [];
-    if (typeof urls[0] === 'string') {
-      return urls.map(u => ({ url: u }));
-    }
-    // 얕은 검증
+    if (typeof urls[0] === 'string') return urls.map(u => ({ url: u }));
     return urls.map(x => ({ url: String(x.url), filename: x.filename ? String(x.filename) : undefined }));
   }
 
   /**
    * @param {Array<string|{url:string, filename?:string}>} urls
-   * @param {string} zipName - 저장할 ZIP 파일명
-   * @param {{concurrency?:number, folderName?:string}} [options]
+   * @param {string} folderName  - ZIP 파일명과 내부 폴더명을 동시에 사용
+   *    - zipName = `${folderName}.zip`
+   *    - inside path = `${folderName}/<files>`
+   * @param {{concurrency?:number}} [options]  // 선택: 동시 다운로드 수 (기본 4)
    */
-  async function download(urls, zipName, { concurrency = 4, folderName } = {}) {
+  async function download(urls, folderName, { concurrency = 4 } = {}) {
     assertEnv();
 
     const list = normalizeUrls(urls);
@@ -112,14 +110,13 @@
       throw new Error(msg);
     }
 
-    const finalZip = sanitizeFilename(
-      zipName?.endsWith('.zip') ? zipName : `${zipName || 'download'}.zip`
-    );
+    const safeFolder = sanitize(folderName || 'download');
+    const zipName = `${safeFolder}.zip`;
 
     // 1) fetch all
     const results = await mapWithConcurrency(
       list,
-      (item) => fetchArrayBuffer(item.url, item.filename && sanitizeFilename(item.filename)),
+      (item) => fetchArrayBuffer(item.url, item.filename && sanitize(item.filename)),
       concurrency
     );
 
@@ -129,7 +126,7 @@
       .map(x => ({
         arrayBuffer: x.r.val.arrayBuffer,
         // 우선순위: caller filename > Content-Disposition/URL
-        filename: sanitizeFilename(x.item.filename || x.r.val.filename),
+        filename: sanitize(x.item.filename || x.r.val.filename),
         srcUrl: x.item.url
       }));
 
@@ -145,7 +142,7 @@
 
     // 2) ZIP
     const zip = new JSZip();
-    const dir = folderName ? zip.folder(sanitizeFilename(folderName)) : zip;
+    const dir = zip.folder(safeFolder); // 내부 폴더도 동일 이름
     const used = new Set();
 
     const ensureUnique = (name) => {
@@ -154,9 +151,7 @@
       const dot = name.lastIndexOf('.');
       if (dot >= 0) { base = name.slice(0, dot); ext = name.slice(dot); }
       let cur = name;
-      while (used.has(cur)) {
-        cur = `${base} (${n++})${ext}`;
-      }
+      while (used.has(cur)) cur = `${base} (${n++})${ext}`;
       used.add(cur);
       return cur;
     };
@@ -174,7 +169,7 @@
       await new Promise((resolve, reject) => {
         GM_download({
           url: objUrl,
-          name: finalZip,
+          name: zipName,
           saveAs: true,
           onload: () => resolve(),
           onerror: (e) => reject(e),
@@ -183,8 +178,8 @@
       });
 
       const okMsg = failures.length
-        ? `완료: ${finalZip} (성공 ${successes.length} / 실패 ${failures.length})`
-        : `완료: ${finalZip} (총 ${successes.length}개)`;
+        ? `완료: ${zipName} (성공 ${successes.length} / 실패 ${failures.length})`
+        : `완료: ${zipName} (총 ${successes.length}개)`;
       if (typeof Toast?.success === 'function') Toast.success(okMsg);
       if (failures.length) console.warn('실패 URL:', failures.map(f => f.item.url));
     } catch (e) {
@@ -196,7 +191,7 @@
     }
   }
 
-  const api = { download, version: '1.1.0' };
+  const api = { download, version: '1.2.0' };
   if (typeof window !== 'undefined') window.useDownload = api;
   if (typeof unsafeWindow !== 'undefined') unsafeWindow.useDownload = api;
 })();

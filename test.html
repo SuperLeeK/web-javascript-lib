@@ -1,0 +1,1179 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web JavaScript Library - 테스트 페이지</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .section {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+
+        .section h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 1.8rem;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+
+        .section h3 {
+            color: #34495e;
+            margin: 20px 0 15px 0;
+            font-size: 1.3rem;
+        }
+
+        .demo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .demo-item {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            border: 1px solid #e9ecef;
+        }
+
+        .demo-item h4 {
+            color: #495057;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            background: #3498db;
+            color: white;
+        }
+
+        .btn:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: #27ae60;
+        }
+
+        .btn-success:hover {
+            background: #229954;
+        }
+
+        .btn-warning {
+            background: #f39c12;
+        }
+
+        .btn-warning:hover {
+            background: #e67e22;
+        }
+
+        .btn-danger {
+            background: #e74c3c;
+        }
+
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+
+        .btn-info {
+            background: #17a2b8;
+        }
+
+        .btn-info:hover {
+            background: #138496;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #495057;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+
+        .color-preview {
+            width: 30px;
+            height: 30px;
+            border-radius: 4px;
+            border: 2px solid #ddd;
+            display: inline-block;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+
+        .theme-display {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .theme-color {
+            padding: 10px;
+            border-radius: 6px;
+            color: white;
+            text-align: center;
+            font-size: 12px;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+
+        .slider-container {
+            margin: 20px 0;
+        }
+
+        .slider-value {
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            color: #3498db;
+            margin: 10px 0;
+        }
+
+        .accordion-container {
+            max-width: 600px;
+            margin: 20px auto;
+        }
+
+        .spinner-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .panel-demo {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+
+        .tooltip-demo {
+            margin: 20px 0;
+        }
+
+        .tooltip-demo button {
+            margin: 5px;
+        }
+
+        .code-block {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #e9ecef;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            color: #6c757d;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .tab.active {
+            color: #3498db;
+            border-bottom: 2px solid #3498db;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .demo-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎨 Web JavaScript Library</h1>
+            <p>위젯들과 라이브러리들을 테스트해보세요</p>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('widgets')">위젯</button>
+            <button class="tab" onclick="showTab('libs')">라이브러리</button>
+            <button class="tab" onclick="showTab('theme')">테마</button>
+        </div>
+
+        <!-- Widgets Tab -->
+        <div id="widgets" class="tab-content active">
+            <!-- Button Section -->
+            <div class="section">
+                <h2>🔘 Button 컴포넌트</h2>
+                <div class="demo-grid">
+                    <div class="demo-item">
+                        <h4>기본 버튼</h4>
+                        <div id="button-demo"></div>
+                        <div class="controls">
+                            <button class="btn" onclick="createButton('default')">기본 버튼</button>
+                            <button class="btn btn-success" onclick="createButton('success')">성공 버튼</button>
+                            <button class="btn btn-warning" onclick="createButton('warning')">경고 버튼</button>
+                            <button class="btn btn-danger" onclick="createButton('danger')">위험 버튼</button>
+                        </div>
+                    </div>
+                    <div class="demo-item">
+                        <h4>버튼 옵션</h4>
+                        <div class="form-group">
+                            <label>크기:</label>
+                            <select id="button-size">
+                                <option value="small">Small</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="large">Large</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>비활성화:</label>
+                            <input type="checkbox" id="button-disabled">
+                        </div>
+                        <button class="btn" onclick="updateButton()">버튼 업데이트</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Check Section -->
+            <div class="section">
+                <h2>☑️ Check 컴포넌트</h2>
+                <div class="demo-grid">
+                    <div class="demo-item">
+                        <h4>기본 체크박스</h4>
+                        <div id="check-demo"></div>
+                        <div class="controls">
+                            <button class="btn" onclick="createCheck('default')">기본 체크박스</button>
+                            <button class="btn" onclick="createCheck('switch')">스위치 스타일</button>
+                        </div>
+                    </div>
+                    <div class="demo-item">
+                        <h4>체크박스 상태</h4>
+                        <div class="controls">
+                            <button class="btn" onclick="toggleCheck()">토글</button>
+                            <button class="btn" onclick="setIndeterminate()">중간 상태</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Radio Section -->
+            <div class="section">
+                <h2>🔘 Radio 컴포넌트</h2>
+                <div class="demo-grid">
+                    <div class="demo-item">
+                        <h4>개별 라디오 버튼</h4>
+                        <div id="radio-demo"></div>
+                        <div class="controls">
+                            <button class="btn" onclick="createRadios()">라디오 버튼 생성</button>
+                        </div>
+                    </div>
+                    <div class="demo-item">
+                        <h4>라디오 그룹</h4>
+                        <div id="radio-group-demo"></div>
+                        <div class="controls">
+                            <button class="btn" onclick="createRadioGroup()">라디오 그룹 생성</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slider Section -->
+            <div class="section">
+                <h2>🎚️ Slider 컴포넌트</h2>
+                <div class="demo-grid">
+                    <div class="demo-item">
+                        <h4>단일 슬라이더</h4>
+                        <div id="slider-demo"></div>
+                        <div class="slider-value" id="slider-value">값: 50</div>
+                        <div class="controls">
+                            <button class="btn" onclick="createSlider()">슬라이더 생성</button>
+                        </div>
+                    </div>
+                    <div class="demo-item">
+                        <h4>범위 슬라이더</h4>
+                        <div id="range-slider-demo"></div>
+                        <div class="slider-value" id="range-slider-value">값: [25, 75]</div>
+                        <div class="controls">
+                            <button class="btn" onclick="createRangeSlider()">범위 슬라이더 생성</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Spinner Section -->
+            <div class="section">
+                <h2>🌀 Spinner 컴포넌트</h2>
+                <div class="demo-grid">
+                    <div class="demo-item">
+                        <h4>스피너 타입</h4>
+                        <div class="spinner-container" id="spinner-demo"></div>
+                        <div class="controls">
+                            <button class="btn" onclick="createSpinner('spinner')">기본 스피너</button>
+                            <button class="btn" onclick="createSpinner('dots')">점 애니메이션</button>
+                            <button class="btn" onclick="createSpinner('bars')">바 애니메이션</button>
+                            <button class="btn" onclick="createSpinner('pulse')">펄스 애니메이션</button>
+                            <button class="btn" onclick="createSpinner('ripple')">리플 애니메이션</button>
+                        </div>
+                    </div>
+                    <div class="demo-item">
+                        <h4>스피너 제어</h4>
+                        <div class="controls">
+                            <button class="btn" onclick="showSpinner()">스피너 표시</button>
+                            <button class="btn" onclick="hideSpinner()">스피너 숨기기</button>
+                            <button class="btn" onclick="showOverlaySpinner()">오버레이 스피너</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Accordion Section -->
+            <div class="section">
+                <h2>📋 Accordion 컴포넌트</h2>
+                <div class="accordion-container" id="accordion-demo"></div>
+                <div class="controls">
+                    <button class="btn" onclick="createAccordion()">아코디언 생성</button>
+                    <button class="btn" onclick="addAccordionItem()">아이템 추가</button>
+                    <button class="btn" onclick="expandAll()">모두 펼치기</button>
+                    <button class="btn" onclick="collapseAll()">모두 접기</button>
+                </div>
+            </div>
+
+            <!-- Panel Section -->
+            <div class="section">
+                <h2>🖼️ Panel 컴포넌트</h2>
+                <div class="controls">
+                    <button class="btn" onclick="createPanel()">패널 생성</button>
+                    <button class="btn" onclick="destroyPanel()">패널 제거</button>
+                </div>
+                <div class="panel-demo" id="panel-demo"></div>
+            </div>
+
+            <!-- Toast Section -->
+            <div class="section">
+                <h2>🍞 Toast 컴포넌트</h2>
+                <div class="demo-grid">
+                    <div class="demo-item">
+                        <h4>토스트 메시지</h4>
+                        <div class="controls">
+                            <button class="btn btn-success" onclick="showToast('success')">성공 메시지</button>
+                            <button class="btn btn-danger" onclick="showToast('error')">오류 메시지</button>
+                            <button class="btn btn-warning" onclick="showToast('warning')">경고 메시지</button>
+                            <button class="btn btn-info" onclick="showToast('info')">정보 메시지</button>
+                        </div>
+                    </div>
+                    <div class="demo-item">
+                        <h4>토스트 위치</h4>
+                        <div class="controls">
+                            <button class="btn" onclick="changeToastPosition('top-left')">좌상단</button>
+                            <button class="btn" onclick="changeToastPosition('top-center')">상단 중앙</button>
+                            <button class="btn" onclick="changeToastPosition('top-right')">우상단</button>
+                            <button class="btn" onclick="changeToastPosition('bottom-left')">좌하단</button>
+                            <button class="btn" onclick="changeToastPosition('bottom-center')">하단 중앙</button>
+                            <button class="btn" onclick="changeToastPosition('bottom-right')">우하단</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tooltip Section -->
+            <div class="section">
+                <h2>💡 Tooltip 컴포넌트</h2>
+                <div class="tooltip-demo">
+                    <h4>기본 툴팁</h4>
+                    <button tooltip="기본 툴팁입니다">기본 툴팁</button>
+                    
+                    <h4>위치별 툴팁</h4>
+                    <button tooltip="위쪽 툴팁" tooltip-position="top">위쪽</button>
+                    <button tooltip="아래쪽 툴팁" tooltip-position="bottom">아래쪽</button>
+                    <button tooltip="왼쪽 툴팁" tooltip-position="left">왼쪽</button>
+                    <button tooltip="오른쪽 툴팁" tooltip-position="right">오른쪽</button>
+                    
+                    <h4>애니메이션 툴팁</h4>
+                    <button tooltip="슬라이드 애니메이션" tooltip-motion="slide" tooltip-delay="300">슬라이드</button>
+                    <button tooltip="페이드 애니메이션" tooltip-motion="fade">페이드</button>
+                    
+                    <h4>커스텀 스타일 툴팁</h4>
+                    <button tooltip="빨간색 툴팁" tooltip-bg="crimson" tooltip-color="white">빨간색</button>
+                    <button tooltip="초록색 툴팁" tooltip-bg="limegreen" tooltip-color="black">초록색</button>
+                    
+                    <h4>Hover 툴팁</h4>
+                    <button tooltip="Hover로 표시되는 툴팁" tooltip-hover="true">Hover 툴팁</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Libs Tab -->
+        <div id="libs" class="tab-content">
+            <!-- useTheme Section -->
+            <div class="section">
+                <h2>🎨 useTheme 라이브러리</h2>
+                <div class="demo-grid">
+                    <div class="demo-item">
+                        <h4>테마 생성</h4>
+                        <div class="form-group">
+                            <label>기본 색상:</label>
+                            <input type="color" id="theme-color" value="#0097A7">
+                        </div>
+                        <div class="form-group">
+                            <label>색상 이름:</label>
+                            <input type="text" id="theme-name" value="primary" placeholder="색상 이름">
+                        </div>
+                        <button class="btn" onclick="generateTheme()">테마 생성</button>
+                    </div>
+                    <div class="demo-item">
+                        <h4>생성된 색상 팔레트</h4>
+                        <div id="theme-palette"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- API Section -->
+            <div class="section">
+                <h2>🌐 API 라이브러리</h2>
+                <div class="demo-grid">
+                    <div class="demo-item">
+                        <h4>API 테스트</h4>
+                        <div class="controls">
+                            <button class="btn" onclick="testGetAPI()">GET 요청</button>
+                            <button class="btn" onclick="testPostAPI()">POST 요청</button>
+                            <button class="btn" onclick="testPutAPI()">PUT 요청</button>
+                            <button class="btn" onclick="testDeleteAPI()">DELETE 요청</button>
+                        </div>
+                        <div id="api-result" class="code-block" style="min-height: 100px;">
+                            API 결과가 여기에 표시됩니다...
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Storage Section -->
+            <div class="section">
+                <h2>💾 Storage 라이브러리</h2>
+                <div class="demo-grid">
+                    <div class="demo-item">
+                        <h4>로컬 스토리지</h4>
+                        <div class="form-group">
+                            <label>키:</label>
+                            <input type="text" id="storage-key" value="test-key">
+                        </div>
+                        <div class="form-group">
+                            <label>값:</label>
+                            <input type="text" id="storage-value" value="test-value">
+                        </div>
+                        <div class="controls">
+                            <button class="btn" onclick="setStorage()">저장</button>
+                            <button class="btn" onclick="getStorage()">가져오기</button>
+                            <button class="btn" onclick="removeStorage()">삭제</button>
+                        </div>
+                        <div id="storage-result" class="code-block" style="min-height: 60px;">
+                            스토리지 결과가 여기에 표시됩니다...
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- KeyPress Section -->
+            <div class="section">
+                <h2>⌨️ KeyPress 라이브러리</h2>
+                <div class="demo-grid">
+                    <div class="demo-item">
+                        <h4>키보드 이벤트</h4>
+                        <div class="controls">
+                            <button class="btn" onclick="startKeyListener()">키 리스너 시작</button>
+                            <button class="btn" onclick="stopKeyListener()">키 리스너 중지</button>
+                        </div>
+                        <div id="keypress-result" class="code-block" style="min-height: 100px;">
+                            키보드 이벤트가 여기에 표시됩니다...
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Observe Section -->
+            <div class="section">
+                <h2>👁️ Observe 라이브러리</h2>
+                <div class="demo-grid">
+                    <div class="demo-item">
+                        <h4>요소 관찰</h4>
+                        <div id="observe-target" style="height: 100px; background: #e9ecef; display: flex; align-items: center; justify-content: center; margin: 20px 0;">
+                            관찰 대상 요소
+                        </div>
+                        <div class="controls">
+                            <button class="btn" onclick="startObserve()">관찰 시작</button>
+                            <button class="btn" onclick="stopObserve()">관찰 중지</button>
+                        </div>
+                        <div id="observe-result" class="code-block" style="min-height: 60px;">
+                            관찰 결과가 여기에 표시됩니다...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Theme Tab -->
+        <div id="theme" class="tab-content">
+            <div class="section">
+                <h2>🎨 테마 시스템</h2>
+                <div class="demo-grid">
+                    <div class="demo-item">
+                        <h4>기본 테마</h4>
+                        <div id="default-theme" class="theme-display"></div>
+                        <button class="btn" onclick="generateDefaultTheme()">기본 테마 생성</button>
+                    </div>
+                    <div class="demo-item">
+                        <h4>커스텀 테마</h4>
+                        <div class="form-group">
+                            <label>Primary 색상:</label>
+                            <input type="color" id="custom-primary" value="#FF6B6B">
+                        </div>
+                        <div class="form-group">
+                            <label>Secondary 색상:</label>
+                            <input type="color" id="custom-secondary" value="#4ECDC4">
+                        </div>
+                        <button class="btn" onclick="generateCustomTheme()">커스텀 테마 생성</button>
+                        <div id="custom-theme" class="theme-display"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="libs/useTheme.js"></script>
+    <script src="libs/API.js"></script>
+    <script src="libs/useStorage.js"></script>
+    <script src="libs/useKeyPress.js"></script>
+    <script src="libs/useObserve.js"></script>
+    <script src="libs/utils.js"></script>
+    
+    <script src="widgets/button.js"></script>
+    <script src="widgets/check.js"></script>
+    <script src="widgets/radio.js"></script>
+    <script src="widgets/slider.js"></script>
+    <script src="widgets/spinner.js"></script>
+    <script src="widgets/accordion.js"></script>
+    <script src="widgets/panel.js"></script>
+    <script src="widgets/toast.js"></script>
+    <script src="widgets/tooltipAttribute.js"></script>
+
+    <script>
+        // 전역 변수들
+        let currentButton = null;
+        let currentCheck = null;
+        let currentSlider = null;
+        let currentRangeSlider = null;
+        let currentSpinner = null;
+        let currentAccordion = null;
+        let currentPanel = null;
+        let keyListener = null;
+        let observer = null;
+
+        // 탭 전환 함수
+        function showTab(tabName) {
+            // 모든 탭 콘텐츠 숨기기
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // 모든 탭 버튼 비활성화
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // 선택된 탭 활성화
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // Button 컴포넌트 테스트
+        function createButton(variant = 'default') {
+            const container = document.getElementById('button-demo');
+            container.innerHTML = '';
+            
+            currentButton = new Button({
+                text: `${variant} 버튼`,
+                variant: variant,
+                size: document.getElementById('button-size').value,
+                disabled: document.getElementById('button-disabled').checked,
+                onClick: () => {
+                    Toast.success('버튼이 클릭되었습니다!');
+                }
+            });
+            
+            currentButton.appendTo(container);
+        }
+
+        function updateButton() {
+            if (currentButton) {
+                currentButton.setSize(document.getElementById('button-size').value);
+                currentButton.setDisabled(document.getElementById('button-disabled').checked);
+            }
+        }
+
+        // Check 컴포넌트 테스트
+        function createCheck(variant = 'default') {
+            const container = document.getElementById('check-demo');
+            container.innerHTML = '';
+            
+            currentCheck = new Check({
+                label: `${variant} 체크박스`,
+                variant: variant,
+                onChange: (checked) => {
+                    Toast.info(`체크박스 상태: ${checked ? '체크됨' : '체크 해제됨'}`);
+                }
+            });
+            
+            currentCheck.appendTo(container);
+        }
+
+        function toggleCheck() {
+            if (currentCheck) {
+                currentCheck.setChecked(!currentCheck.getChecked());
+            }
+        }
+
+        function setIndeterminate() {
+            if (currentCheck) {
+                currentCheck.setIndeterminate(true);
+            }
+        }
+
+        // Radio 컴포넌트 테스트
+        function createRadios() {
+            const container = document.getElementById('radio-demo');
+            container.innerHTML = '';
+            
+            const options = ['옵션 1', '옵션 2', '옵션 3'];
+            options.forEach((option, index) => {
+                const radio = new Radio({
+                    name: 'demo-radio',
+                    label: option,
+                    value: `option-${index + 1}`,
+                    onChange: (checked, value) => {
+                        if (checked) {
+                            Toast.success(`선택됨: ${option}`);
+                        }
+                    }
+                });
+                radio.appendTo(container);
+            });
+        }
+
+        function createRadioGroup() {
+            const container = document.getElementById('radio-group-demo');
+            container.innerHTML = '';
+            
+            const radioGroup = new RadioGroup({
+                name: 'demo-group',
+                radios: [
+                    { label: '남성', value: 'male' },
+                    { label: '여성', value: 'female' },
+                    { label: '기타', value: 'other' }
+                ],
+                onChange: (value) => {
+                    Toast.info(`선택된 성별: ${value}`);
+                }
+            });
+            
+            radioGroup.appendTo(container);
+        }
+
+        // Slider 컴포넌트 테스트
+        function createSlider() {
+            const container = document.getElementById('slider-demo');
+            container.innerHTML = '';
+            
+            currentSlider = new Slider({
+                min: 0,
+                max: 100,
+                value: 50,
+                onChange: (value) => {
+                    document.getElementById('slider-value').textContent = `값: ${value}`;
+                }
+            });
+            
+            currentSlider.appendTo(container);
+        }
+
+        function createRangeSlider() {
+            const container = document.getElementById('range-slider-demo');
+            container.innerHTML = '';
+            
+            currentRangeSlider = new Slider({
+                min: 0,
+                max: 100,
+                range: true,
+                rangeValues: [25, 75],
+                onChange: (values) => {
+                    document.getElementById('range-slider-value').textContent = `값: [${values[0]}, ${values[1]}]`;
+                }
+            });
+            
+            currentRangeSlider.appendTo(container);
+        }
+
+        // Spinner 컴포넌트 테스트
+        function createSpinner(type = 'spinner') {
+            const container = document.getElementById('spinner-demo');
+            container.innerHTML = '';
+            
+            currentSpinner = new Spinner({
+                type: type,
+                text: `${type} 스피너`,
+                size: 'medium'
+            });
+            
+            currentSpinner.appendTo(container);
+            currentSpinner.show();
+        }
+
+        function showSpinner() {
+            if (currentSpinner) {
+                currentSpinner.show();
+            }
+        }
+
+        function hideSpinner() {
+            if (currentSpinner) {
+                currentSpinner.hide();
+            }
+        }
+
+        function showOverlaySpinner() {
+            const overlaySpinner = new Spinner({
+                text: '오버레이 스피너',
+                overlay: true,
+                type: 'dots'
+            });
+            
+            overlaySpinner.show();
+            
+            setTimeout(() => {
+                overlaySpinner.hide();
+            }, 3000);
+        }
+
+        // Accordion 컴포넌트 테스트
+        function createAccordion() {
+            const container = document.getElementById('accordion-demo');
+            container.innerHTML = '';
+            
+            currentAccordion = new Accordion({
+                items: [
+                    {
+                        title: '섹션 1',
+                        content: '섹션 1의 내용입니다. 여기에 다양한 콘텐츠를 넣을 수 있습니다.'
+                    },
+                    {
+                        title: '섹션 2',
+                        content: '섹션 2의 내용입니다. HTML 요소도 포함할 수 있습니다.'
+                    },
+                    {
+                        title: '섹션 3',
+                        content: '섹션 3의 내용입니다. 아코디언은 접을 수 있는 섹션들을 제공합니다.'
+                    }
+                ],
+                onToggle: (index, expanded) => {
+                    Toast.info(`섹션 ${index + 1}: ${expanded ? '펼쳐짐' : '접힘'}`);
+                }
+            });
+            
+            currentAccordion.appendTo(container);
+        }
+
+        function addAccordionItem() {
+            if (currentAccordion) {
+                const newIndex = currentAccordion.addItem({
+                    title: `새 섹션 ${currentAccordion.getItemCount() + 1}`,
+                    content: '동적으로 추가된 섹션입니다.',
+                    expanded: true
+                });
+                Toast.success(`새 섹션이 추가되었습니다. (인덱스: ${newIndex})`);
+            }
+        }
+
+        function expandAll() {
+            if (currentAccordion) {
+                currentAccordion.expandAll();
+            }
+        }
+
+        function collapseAll() {
+            if (currentAccordion) {
+                currentAccordion.collapseAll();
+            }
+        }
+
+        // Panel 컴포넌트 테스트
+        function createPanel() {
+            if (currentPanel) {
+                currentPanel.destroy();
+            }
+            
+            currentPanel = new Panel({
+                position: { type: 'bottom-right' },
+                buttons: [
+                    [
+                        { title: '테스트 패널' },
+                        {
+                            type: 'toggle',
+                            label: '다크 모드',
+                            onChange: (isOn) => {
+                                Toast.info(`다크 모드: ${isOn ? '켜짐' : '꺼짐'}`);
+                            }
+                        }
+                    ],
+                    [
+                        {
+                            type: 'check',
+                            label: '자동 저장',
+                            onChange: (isChecked) => {
+                                Toast.info(`자동 저장: ${isChecked ? '활성화' : '비활성화'}`);
+                            }
+                        },
+                        {
+                            type: 'button',
+                            label: '저장',
+                            onClick: () => {
+                                Toast.success('저장되었습니다!');
+                            }
+                        }
+                    ]
+                ]
+            });
+        }
+
+        function destroyPanel() {
+            if (currentPanel) {
+                currentPanel.destroy();
+                currentPanel = null;
+            }
+        }
+
+        // Toast 컴포넌트 테스트
+        function showToast(type) {
+            const messages = {
+                success: '성공적으로 처리되었습니다!',
+                error: '오류가 발생했습니다.',
+                warning: '주의하세요!',
+                info: '정보 메시지입니다.'
+            };
+            
+            Toast[type](messages[type]);
+        }
+
+        function changeToastPosition(position) {
+            Toast.init({ position: position });
+            Toast.info(`토스트 위치가 ${position}로 변경되었습니다.`);
+        }
+
+        // useTheme 라이브러리 테스트
+        function generateTheme() {
+            const color = document.getElementById('theme-color').value;
+            const name = document.getElementById('theme-name').value;
+            
+            const theme = useTheme({
+                [name]: color
+            });
+            
+            displayThemePalette(theme, name);
+        }
+
+        function displayThemePalette(theme, colorName) {
+            const container = document.getElementById('theme-palette');
+            container.innerHTML = '';
+            
+            const steps = ['50', '100', '200', '300', '400', '500', '600', '700', '800', '900'];
+            
+            steps.forEach(step => {
+                const colorKey = `${colorName}${step}`;
+                if (theme[colorKey]) {
+                    const colorDiv = document.createElement('div');
+                    colorDiv.className = 'theme-color';
+                    colorDiv.style.backgroundColor = theme[colorKey];
+                    colorDiv.textContent = `${step}: ${theme[colorKey]}`;
+                    container.appendChild(colorDiv);
+                }
+            });
+        }
+
+        function generateDefaultTheme() {
+            const theme = useTheme();
+            displayThemePalette(theme, 'primary');
+        }
+
+        function generateCustomTheme() {
+            const primary = document.getElementById('custom-primary').value;
+            const secondary = document.getElementById('custom-secondary').value;
+            
+            const theme = useTheme({
+                primary: primary,
+                secondary: secondary
+            });
+            
+            const container = document.getElementById('custom-theme');
+            container.innerHTML = '';
+            
+            ['primary', 'secondary'].forEach(colorName => {
+                const steps = ['50', '100', '200', '300', '400', '500', '600', '700', '800', '900'];
+                steps.forEach(step => {
+                    const colorKey = `${colorName}${step}`;
+                    if (theme[colorKey]) {
+                        const colorDiv = document.createElement('div');
+                        colorDiv.className = 'theme-color';
+                        colorDiv.style.backgroundColor = theme[colorKey];
+                        colorDiv.textContent = `${colorName}${step}`;
+                        container.appendChild(colorDiv);
+                    }
+                });
+            });
+        }
+
+        // API 라이브러리 테스트
+        async function testGetAPI() {
+            const resultDiv = document.getElementById('api-result');
+            resultDiv.textContent = 'GET 요청 중...';
+            
+            try {
+                const response = await API.get('https://jsonplaceholder.typicode.com/posts/1');
+                resultDiv.textContent = JSON.stringify(response, null, 2);
+            } catch (error) {
+                resultDiv.textContent = `오류: ${error.message}`;
+            }
+        }
+
+        async function testPostAPI() {
+            const resultDiv = document.getElementById('api-result');
+            resultDiv.textContent = 'POST 요청 중...';
+            
+            try {
+                const response = await API.post('https://jsonplaceholder.typicode.com/posts', {
+                    title: '테스트 제목',
+                    body: '테스트 내용',
+                    userId: 1
+                });
+                resultDiv.textContent = JSON.stringify(response, null, 2);
+            } catch (error) {
+                resultDiv.textContent = `오류: ${error.message}`;
+            }
+        }
+
+        async function testPutAPI() {
+            const resultDiv = document.getElementById('api-result');
+            resultDiv.textContent = 'PUT 요청 중...';
+            
+            try {
+                const response = await API.put('https://jsonplaceholder.typicode.com/posts/1', {
+                    title: '수정된 제목',
+                    body: '수정된 내용',
+                    userId: 1
+                });
+                resultDiv.textContent = JSON.stringify(response, null, 2);
+            } catch (error) {
+                resultDiv.textContent = `오류: ${error.message}`;
+            }
+        }
+
+        async function testDeleteAPI() {
+            const resultDiv = document.getElementById('api-result');
+            resultDiv.textContent = 'DELETE 요청 중...';
+            
+            try {
+                const response = await API.delete('https://jsonplaceholder.typicode.com/posts/1');
+                resultDiv.textContent = JSON.stringify(response, null, 2);
+            } catch (error) {
+                resultDiv.textContent = `오류: ${error.message}`;
+            }
+        }
+
+        // Storage 라이브러리 테스트
+        function setStorage() {
+            const key = document.getElementById('storage-key').value;
+            const value = document.getElementById('storage-value').value;
+            
+            Storage.set(key, value);
+            document.getElementById('storage-result').textContent = `저장됨: ${key} = ${value}`;
+        }
+
+        function getStorage() {
+            const key = document.getElementById('storage-key').value;
+            const value = Storage.get(key);
+            
+            document.getElementById('storage-result').textContent = `가져옴: ${key} = ${value}`;
+        }
+
+        function removeStorage() {
+            const key = document.getElementById('storage-key').value;
+            
+            Storage.remove(key);
+            document.getElementById('storage-result').textContent = `삭제됨: ${key}`;
+        }
+
+        // KeyPress 라이브러리 테스트
+        function startKeyListener() {
+            const resultDiv = document.getElementById('keypress-result');
+            resultDiv.textContent = '키보드 이벤트 리스너가 시작되었습니다. 키를 눌러보세요...';
+            
+            keyListener = useKeyPress(['Enter', 'Space', 'Escape', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'], (key) => {
+                resultDiv.textContent = `눌린 키: ${key}`;
+            });
+        }
+
+        function stopKeyListener() {
+            if (keyListener) {
+                keyListener();
+                keyListener = null;
+                document.getElementById('keypress-result').textContent = '키보드 이벤트 리스너가 중지되었습니다.';
+            }
+        }
+
+        // Observe 라이브러리 테스트
+        function startObserve() {
+            const resultDiv = document.getElementById('observe-result');
+            resultDiv.textContent = '요소 관찰이 시작되었습니다. 요소를 화면에서 벗어나게 해보세요...';
+            
+            const target = document.getElementById('observe-target');
+            
+            observer = useObserve(target, (entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        resultDiv.textContent = '요소가 화면에 보입니다.';
+                    } else {
+                        resultDiv.textContent = '요소가 화면에서 벗어났습니다.';
+                    }
+                });
+            });
+        }
+
+        function stopObserve() {
+            if (observer) {
+                observer.disconnect();
+                observer = null;
+                document.getElementById('observe-result').textContent = '요소 관찰이 중지되었습니다.';
+            }
+        }
+
+        // 페이지 로드 시 초기화
+        document.addEventListener('DOMContentLoaded', function() {
+            // 기본 컴포넌트들 생성
+            createButton('default');
+            createCheck('default');
+            createRadios();
+            createRadioGroup();
+            createSlider();
+            createRangeSlider();
+            createSpinner('spinner');
+            createAccordion();
+            
+            // 툴팁 활성화
+            enableTooltips();
+            
+            // 기본 테마 생성
+            generateDefaultTheme();
+            
+            // 토스트 초기화
+            Toast.init({ position: 'bottom-right' });
+            
+            Toast.success('테스트 페이지가 로드되었습니다!');
+        });
+    </script>
+</body>
+</html> 

@@ -1,14 +1,16 @@
 /*!
- * useDownload.js
- * version: 1.3.0
- * deps: JSZip (global), Toast (global Toast.success / Toast.error)
+ * useDownload.js (GM_download edition)
+ * version: 2.0.0-gm
+ * deps: Toast (global Toast.success / Toast.error)
  * env: Tampermonkey/Greasemonkey (GM_xmlhttpRequest, GM_download)
+ * NOTE:
+ *  - ZIP 생성 없음. 여러 파일을 개별 저장합니다.
+ *  - ZIP 묶기는 OS/외부 API에서 수행하세요. (파일명 접두어로 그룹핑)
  */
 (function () {
   'use strict';
 
   function assertEnv() {
-    if (typeof JSZip === 'undefined') throw new Error('JSZip 미로드 (@require jszip 필요)');
     if (typeof GM_xmlhttpRequest !== 'function') throw new Error('GM_xmlhttpRequest 불가 (@grant 필요)');
     if (typeof GM_download !== 'function') throw new Error('GM_download 불가 (@grant 필요)');
   }
@@ -24,77 +26,47 @@
     } catch { return 'file'; }
   };
 
-  const parseFilenameFromContentDisposition = (value) => {
-    if (!value) return null;
-    const utf8 = /filename\*\s*=\s*UTF-8''([^;]+)/i.exec(value);
-    if (utf8) return sanitize(decodeURIComponent(utf8[1]));
-    const quoted = /filename\s*=\s*"([^"]+)"/i.exec(value);
-    if (quoted) return sanitize(quoted[1]);
-    const bare = /filename\s*=\s*([^;]+)/i.exec(value);
-    if (bare) return sanitize(bare[1]);
-    return null;
-  };
+  // 중복 파일명 방지용 – 같은 실행 배치 안에서만 보장(OS 레벨 충돌 방지는 보장 못함)
+  function uniquifyNames(pairs) {
+    const used = new Map(); // base -> count
+    return pairs.map(({ url, name }) => {
+      const dot = name.lastIndexOf('.');
+      const base = dot >= 0 ? name.slice(0, dot) : name;
+      const ext  = dot >= 0 ? name.slice(dot) : '';
+      const key  = name.toLowerCase();
 
-  function fetchArrayBuffer(url, fallbackName, reqOpt = {}) {
-    const {
-      referer = location.href,          // 기본은 현재 페이지
-      headers = {},                     // 추가 헤더
-      anonymous = false,                // true면 쿠키/자격증명 제거
-      timeout = 120000,
-    } = reqOpt;
-  
-    return new Promise((resolve, reject) => {
-      GM_xmlhttpRequest({
-        method: 'GET',
-        url,
-        responseType: 'arraybuffer',
-        timeout,
-        // Tampermonkey 전용 옵션: referer 헤더 지정
-        referer,                       // <— 중요 (일부 사이트는 꼭 필요)
-        // 일반 헤더들
-        headers,
-        // 익명 모드: true면 쿠키/자격증명 미포함
-        anonymous,
-        onload: (res) => {
-          if (res.status >= 200 && res.status < 300 && res.response) {
-            const cdHeaderLine = res.responseHeaders
-              ?.split(/\r?\n/)
-              ?.find(h => /^content-disposition:/i.test(h));
-            const cdVal = cdHeaderLine ? cdHeaderLine.split(':',2)[1] : null;
-            const nameFromCD = parseFilenameFromContentDisposition(cdVal);
-            resolve({
-              arrayBuffer: res.response,
-              filename: nameFromCD || fallbackName || inferFilenameFromUrl(url),
-            });
-          } else {
-            console.error('[useDownload] HTTP fail', {
-              url, status: res.status, statusText: res.statusText,
-              headers: res.responseHeaders?.split(/\r?\n/).slice(0,8)
-            });
-            reject(new Error(`HTTP ${res.status} for ${url}`));
-          }
-        },
-        onerror: (e) => { console.error('[useDownload] network error', url, e); reject(new Error(`Network error for ${url}`)); },
-        ontimeout: () => { console.error('[useDownload] timeout', url); reject(new Error(`Timeout for ${url}`)); },
-      });
+      if (!used.has(key)) {
+        used.set(key, 1);
+        return { url, name };
+      }
+      // 중복 발생 → base (n).ext
+      let n = used.get(key) + 1;
+      let candidate = `${base} (${n})${ext}`;
+      while (used.has(candidate.toLowerCase())) {
+        n += 1;
+        candidate = `${base} (${n})${ext}`;
+      }
+      used.set(key, n);
+      used.set(candidate.toLowerCase(), 1);
+      return { url, name: candidate };
     });
   }
 
   async function mapWithConcurrency(items, worker, concurrency = 1, onEachDone) {
     let i = 0, active = 0, done = 0;
-    const results = new Array(items.length);
+    const res = new Array(items.length);
     return new Promise((resolve) => {
       const pump = () => {
         while (active < concurrency && i < items.length) {
-          const idx = i++, item = items[idx];
+          const idx = i++;
           active++;
-          Promise.resolve(worker(item, idx))
-            .then(val => { results[idx] = { ok: true, val }; })
-            .catch(err => { results[idx] = { ok: false, err }; })
+          Promise.resolve(worker(items[idx], idx))
+            .then(v => { res[idx] = { ok: true, val: v }; })
+            .catch(e => { res[idx] = { ok: false, err: e }; })
             .finally(() => {
               active--; done++;
               try { onEachDone && onEachDone(done, items.length); } catch {}
-              if (done === items.length) resolve(results);
+              if (done === items.length) resolve(res);
               else pump();
             });
         }
@@ -103,7 +75,7 @@
     });
   }
 
-  // string[] | {url, filename?}[] -> {url, filename?}[]
+  // string[] | {url, filename?}[] -> [{url, filename?}]
   function normalizeUrls(urls) {
     if (!Array.isArray(urls)) return [];
     if (urls.length === 0) return [];
@@ -111,14 +83,95 @@
     return urls.map(x => ({ url: String(x.url), filename: x.filename ? String(x.filename) : undefined }));
   }
 
+  /** GM_download 직행 */
+  function gmDownloadDirect(fileUrl, name, { saveAs = false, timeout = 60000 } = {}) {
+    return new Promise((resolve, reject) => {
+      let done = false;
+      const finish = (ok, err) => { if (done) return; done = true; ok ? resolve() : reject(err); };
+      const t = setTimeout(() => finish(false, new Error('GM_download timeout')), timeout);
+
+      try {
+        GM_download({
+          url: fileUrl,
+          name,
+          saveAs,
+          onload: () => { clearTimeout(t); finish(true); },
+          onerror: (e) => { clearTimeout(t); finish(false, e); },
+          ontimeout: () => { clearTimeout(t); finish(false, new Error('timeout')); }
+        });
+      } catch (e) {
+        clearTimeout(t);
+        finish(false, e);
+      }
+    });
+  }
+
+  /** GM_xhr로 Blob 받고 blob:URL로 GM_download (Referer/헤더 강제 가능) */
+  function gmDownloadViaXHR(fileUrl, name, reqOpt = {}, { saveAs = false, timeout = 60000 } = {}) {
+    const {
+      referer = location.href,
+      headers = {},
+      anonymous = false,
+      xhrTimeout = Math.max(timeout, 60000)
+    } = reqOpt;
+
+    return new Promise((resolve, reject) => {
+      GM_xmlhttpRequest({
+        method: 'GET',
+        url: fileUrl,
+        // Tampermonkey는 referer 속성을 지원 (문서화는 제한적, 실제 동작 일반적)
+        referer,
+        headers: {
+          'Accept': headers.Accept || 'image/avif,image/webp,image/*,*/*;q=0.8',
+          'Accept-Language': headers['Accept-Language'] || (navigator.language || 'en-US,en;q=0.9'),
+          ...headers
+        },
+        responseType: 'blob',
+        anonymous,
+        timeout: xhrTimeout,
+        onload: (res) => {
+          const blob = res.response;
+          const objUrl = URL.createObjectURL(blob);
+          GM_download({
+            url: objUrl,
+            name,
+            saveAs,
+            onload: () => { URL.revokeObjectURL(objUrl); resolve(); },
+            onerror: (e) => { URL.revokeObjectURL(objUrl); reject(e); },
+            ontimeout: () => { URL.revokeObjectURL(objUrl); reject(new Error('timeout')); }
+          });
+        },
+        onerror: (e) => reject(e),
+        ontimeout: () => reject(new Error('timeout')),
+      });
+    });
+  }
+
   /**
+   * 메인 API: 여러 파일을 개별 저장 (ZIP 없음)
+   *
    * @param {Array<string|{url:string, filename?:string}>} urls
-   * @param {string} folderName  - zipName = `${folderName}.zip`, 내부 폴더도 동일 이름
-   * @param {{concurrency?:number}} [options]
+   * @param {string} folderName           - 접두어로 사용 (예: "제목" → "제목-001.webp")
+   * @param {{
+   *   concurrency?: number,              // 동시 다운로드 개수(기본 3)
+   *   saveAs?: boolean,                  // 각 파일 저장 시 파일선택창(기본 false)
+   *   timeoutMs?: number,                // GM_download 타임아웃(기본 60000)
+   *   request?: { referer?:string, headers?:object, anonymous?:boolean }, // XHR 경로 옵션
+   *   prefixMode?: 'prepend'|'none'      // 파일명 접두어 전략 (기본 'prepend')
+   * }} [options]
    * @param {(p:{current:number,total:number,percent:number})=>void} [onProgress]
+   * @return {Promise<{successes:Array<{url:string,name:string}>,failures:Array<{url:string,name:string,err:any}>}>}
    */
-  async function download(urls, folderName, { concurrency = 1, request } = {}, onProgress) {
+  async function download(urls, folderName, options = {}, onProgress) {
     assertEnv();
+
+    const {
+      concurrency = 3,
+      saveAs = false,
+      timeoutMs = 60000,
+      request = {},
+      prefixMode = 'prepend'
+    } = options;
 
     const list = normalizeUrls(urls);
     if (!list.length) {
@@ -127,105 +180,82 @@
       throw new Error(msg);
     }
 
-    const safeFolder = sanitize(folderName || 'download');
-    const zipName = `${safeFolder}.zip`;
+    // 파일명 결정 + 접두어 적용
+    const prefix = sanitize(folderName || '');
+    const pairs = list.map((item, idx) => {
+      const baseName = sanitize(item.filename || inferFilenameFromUrl(item.url) || `file-${idx + 1}`);
+      const name = (prefix && prefixMode === 'prepend' && !baseName.startsWith(prefix + '-'))
+        ? `${prefix}-${baseName}`
+        : baseName;
+      return { url: item.url, name };
+    });
 
-    // 1) fetch all — 파일 단위 진행률
-    const totalFetch = list.length;
-    const reportFetch = (done) => {
-      if (typeof onProgress === 'function') {
-        const percent = totalFetch ? (done / totalFetch) * 100 : 100;
-        try { onProgress({ current: done, total: totalFetch, percent }); } catch {}
-      }
+    // 실행 배치 내 중복명 예방
+    const jobs = uniquifyNames(pairs);
+
+    const total = jobs.length;
+    let current = 0;
+    const progress = () => {
+      try {
+        onProgress && onProgress({
+          current,
+          total,
+          percent: total ? Math.floor((current / total) * 100) : 100
+        });
+      } catch {}
     };
-    reportFetch(0);
+    progress();
+
+    // preferXHR: 리퍼러/헤더 지정 시 곧장 XHR 경로 사용
+    const preferXHR = !!(request && (request.referer || (request.headers && Object.keys(request.headers).length)));
 
     const results = await mapWithConcurrency(
-      list,
-      (item) => fetchArrayBuffer(item.url, item.filename && sanitize(item.filename), request),
-      concurrency,
-      (done) => reportFetch(done)
+      jobs,
+      async ({ url, name }) => {
+        if (preferXHR) {
+          await gmDownloadViaXHR(url, name, request, { saveAs, timeout: timeoutMs });
+        } else {
+          try {
+            await gmDownloadDirect(url, name, { saveAs, timeout: timeoutMs });
+          } catch (e) {
+            // 핫링크 방지/혼합콘텐츠 등으로 실패 → XHR 폴백
+            await gmDownloadViaXHR(url, name, request, { saveAs, timeout: timeoutMs });
+          }
+        }
+        current++; progress();
+        return { url, name };
+      },
+      Math.max(1, concurrency),
+      // 파일 단위 완료 시마다 호출됨(위에서 current++로 처리)
+      null
     );
 
     const successes = results
-      .map((r, i) => ({ r, item: list[i] }))
+      .map((r, i) => ({ r, j: jobs[i] }))
       .filter(x => x.r?.ok)
-      .map(x => ({
-        arrayBuffer: x.r.val.arrayBuffer,
-        filename: sanitize(x.item.filename || x.r.val.filename),
-        srcUrl: x.item.url
-      }));
+      .map(x => ({ url: x.j.url, name: x.j.name }));
 
     const failures = results
-      .map((r, i) => ({ r, item: list[i] }))
-      .filter(x => !x.r?.ok);
+      .map((r, i) => ({ r, j: jobs[i] }))
+      .filter(x => !x.r?.ok)
+      .map(x => ({ url: x.j.url, name: x.j.name, err: x.r.err }));
 
-    if (!successes.length) {
-      const msg = '모든 다운로드가 실패했습니다. (@connect 도메인/권한 확인)';
+    if (successes.length) {
+      const msg = failures.length
+        ? `다운로드 완료 (성공 ${successes.length} / 실패 ${failures.length})`
+        : `다운로드 완료 (총 ${successes.length}개)`;
+      if (typeof Toast?.success === 'function') Toast.success(msg);
+      if (failures.length) console.warn('[useDownload] 실패 항목:', failures);
+    } else {
+      const msg = '모든 다운로드가 실패했습니다. (@connect 도메인/권한 및 referer/headers 확인)';
       if (typeof Toast?.error === 'function') Toast.error(msg);
       throw new Error(msg);
     }
 
-    // 2) ZIP — 압축 진행률 (0~100)
-    const zip = new JSZip();
-    const dir = zip.folder(safeFolder);
-    const used = new Set();
-    const ensureUnique = (name) => {
-      let n = 1;
-      let base = name, ext = '';
-      const dot = name.lastIndexOf('.');
-      if (dot >= 0) { base = name.slice(0, dot); ext = name.slice(dot); }
-      let cur = name;
-      while (used.has(cur)) cur = `${base} (${n++})${ext}`;
-      used.add(cur);
-      return cur;
-    };
-    successes.forEach(({ arrayBuffer, filename }) => {
-      const unique = ensureUnique(filename);
-      dir.file(unique, arrayBuffer);
-    });
-
-    const blob = await zip.generateAsync({ type: 'blob' }, (meta) => {
-      if (typeof onProgress === 'function') {
-        const p = Math.max(0, Math.min(100, meta.percent || 0));
-        try { onProgress({ current: Math.round(p), total: 100, percent: p }); } catch {}
-      }
-    });
-
-    // 3) save once — 완료 알림
-    const objUrl = URL.createObjectURL(blob);
-    try {
-      // 저장 직전 100% 한 번 보냄 (zip 단계가 이미 100 찍었으면 중복일 수 있음)
-      if (typeof onProgress === 'function') {
-        try { onProgress({ current: 100, total: 100, percent: 100 }); } catch {}
-      }
-
-      await new Promise((resolve, reject) => {
-        GM_download({
-          url: objUrl,
-          name: zipName,
-          saveAs: true,
-          onload: () => resolve(),
-          onerror: (e) => reject(e),
-          ontimeout: () => reject(new Error('GM_download timeout')),
-        });
-      });
-
-      const okMsg = failures.length
-        ? `완료: ${zipName} (성공 ${successes.length} / 실패 ${failures.length})`
-        : `완료: ${zipName} (총 ${successes.length}개)`;
-      if (typeof Toast?.success === 'function') Toast.success(okMsg);
-      if (failures.length) console.warn('실패 URL:', failures.map(f => f.item.url));
-    } catch (e) {
-      const errMsg = `ZIP 저장 오류: ${e?.message || e}`;
-      if (typeof Toast?.error === 'function') Toast.error(errMsg);
-      throw e;
-    } finally {
-      URL.revokeObjectURL(objUrl);
-    }
+    return { successes, failures };
   }
 
-  const api = { download, version: '1.3.0' };
+  const api = { download, version: '2.0.0-gm' };
   if (typeof window !== 'undefined') window.useDownload = api;
   if (typeof unsafeWindow !== 'undefined') unsafeWindow.useDownload = api;
 })();

@@ -1,6 +1,5 @@
 /* eslint-disable */
 ;(function (root, factory) {
-  // UMD: CommonJS / AMD / Global(unsafeWindow|window)
   if (typeof module === "object" && module.exports) {
     module.exports = factory(getRoot());
   } else if (typeof define === "function" && define.amd) {
@@ -8,10 +7,9 @@
   } else {
     const api = factory(getRoot());
     const g = (typeof unsafeWindow !== "undefined" ? unsafeWindow : window);
-    g.useValue = api.useValue;
-    g.useValueLib = api;
+    g.useValue = api.useValue;       // tuple API
+    g.useValueLib = api;             // factory/low-level helpers
   }
-
   function getRoot() {
     try { return (typeof unsafeWindow !== "undefined" ? unsafeWindow : window); }
     catch { return undefined; }
@@ -19,317 +17,235 @@
 })(this, function (root) {
   "use strict";
 
-  // -----------------------------
-  // GM helpers with graceful fallback
-  // -----------------------------
+  // ---- GM fallbacks ----
   const GMX = {
-    getValue: (typeof GM_getValue === "function") ? GM_getValue : (key, def) => {
-      try {
-        const raw = localStorage.getItem(key);
-        return raw == null ? def : JSON.parse(raw);
-      } catch { return def; }
-    },
-    setValue: (typeof GM_setValue === "function") ? GM_setValue : (key, val) => {
-      try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
-    },
-    deleteValue: (typeof GM_deleteValue === "function") ? GM_deleteValue : (key) => {
-      try { localStorage.removeItem(key); } catch {}
-    },
+    getValue: (typeof GM_getValue === "function") ? GM_getValue : (k, d)=>{ try{const s=localStorage.getItem(k); return s==null?d:JSON.parse(s);}catch{return d;} },
+    setValue: (typeof GM_setValue === "function") ? GM_setValue : (k, v)=>{ try{localStorage.setItem(k, JSON.stringify(v));}catch{} },
+    deleteValue: (typeof GM_deleteValue === "function") ? GM_deleteValue : (k)=>{ try{localStorage.removeItem(k);}catch{} },
     addListener: (typeof GM_addValueChangeListener === "function") ? GM_addValueChangeListener : null,
     removeListener: (typeof GM_removeValueChangeListener === "function") ? GM_removeValueChangeListener : null,
   };
 
-  // -----------------------------
-  // utils
-  // -----------------------------
-  function withPrefix(prefix, key) {
-    if (!prefix) return key;
-    return `${prefix}:${key}`;
-  }
+  // ---- utils ----
+  const isObj = (x) => x && typeof x === 'object';
+  const isEqual = (a,b) => { if (a===b) return true; try{ return JSON.stringify(a)===JSON.stringify(b);}catch{return false;} };
+  const box = (v)=>({__boxed__:true,v});
+  const unbox = (v,d)=> (v&&typeof v==='object'&&v.__boxed__===true) ? v.v : (v===undefined?d:v);
+  const withPrefix = (p,k)=> p ? `${p}:${k}` : k;
+  const debounce = (fn,ms)=>{ let t=null, lastArgs=null; return function(){ lastArgs=arguments; if(t)clearTimeout(t); t=setTimeout(()=>{t=null; fn.apply(null,lastArgs);}, Math.max(0, ms|0)); } };
 
-  // light box/unbox to allow future format changes
-  function box(v) { return { __boxed__: true, v }; }
-  function unbox(v, def) {
-    if (v && typeof v === "object" && v.__boxed__ === true) return v.v;
-    return (v === undefined) ? def : v; // backward-compat
-  }
+  // local pub/sub (non-GM listener env)
+  const bus = new Map();
+  const emit = (key, nv, ov)=>{ const s=bus.get(key); if(!s) return; for(const cb of s){ try{ cb(nv,ov,false,key);}catch{} } };
 
-  function isEqual(a, b) {
-    if (a === b) return true;
-    try { return JSON.stringify(a) === JSON.stringify(b); }
-    catch { return false; }
-  }
-
-  function debounce(fn, ms) {
-    let t = null, lastArgs = null, pending = false;
-    return function debounced() {
-      lastArgs = arguments;
-      if (t) clearTimeout(t);
-      t = setTimeout(() => {
-        t = null;
-        pending = false;
-        fn.apply(null, lastArgs);
-      }, Math.max(0, ms|0));
-      pending = true;
-    };
-  }
-
-  // local pub/sub fallback when GM listeners not available
-  const localBus = new Map(); // key -> Set(cb)
-  function emitLocal(key, newVal, oldVal) {
-    const subs = localBus.get(key);
-    if (!subs) return;
-    for (const cb of subs) {
-      try { cb(newVal, oldVal, false /*remote*/, key); } catch {}
-    }
-  }
-
-  // -----------------------------
-  // core
-  // -----------------------------
-  /**
-   * useValue
-   * @param {string} key
-   * @param {*} initialValue
-   * @param {Object} [opts]
-   * @param {string} [opts.prefix=""]
-   * @param {boolean} [opts.persistInitial=false] - 값이 없으면 initial을 즉시 저장
-   * @param {number} [opts.pollMs=500] - GM listener 미사용 환경에서 폴링 주기
-   * @param {function(any):any} [opts.serialize=(v)=>v] - set 직전 변환(예: Date→ISO)
-   * @param {function(any):any} [opts.deserialize=(v)=>v] - get 직후 복원(예: ISO→Date)
-   * @param {Object} [opts.sync] - 원격 동기화 훅
-   * @param {function(string, any):Promise<void|boolean>} [opts.sync.push] - (key, value) 원격 업로드
-   * @param {function(string):Promise<any>} [opts.sync.pull] - (key) 원격에서 최신값 받기
-   * @param {Object} [opts.auto] - 자동 동기화 제어
-   * @param {boolean} [opts.auto.pullOnInit=true] - 생성 시 즉시 원격 pull 시도
-   * @param {number} [opts.auto.pullIntervalMs=0] - 주기적 pull (0=비활성)
-   * @param {number} [opts.auto.pushDebounceMs=0] - 변경 시 push 디바운스
-   * @param {function(local:any, remote:any):any} [opts.auto.resolver] - 충돌 해결(기본 LWW by ts)
-   */
-  function useValue(key, initialValue, opts) {
-    const settings = Object.assign({
-      prefix: "",
-      persistInitial: false,
-      pollMs: 500,
-      serialize: (v) => v,
-      deserialize: (v) => v,
-      sync: null,
+  // -------------------------------
+  // Tuple API:
+  //   const [state, setState] = useValue(WEB_APP_URL, initialValue, options)
+  //   - state: 함수(getter)로 제공: 호출 시 최신값 반환 (스냅샷 아님)
+  //   - setState(nextOrUpdater): 로컬 갱신 + (옵션에 따라) 원격 push
+  //
+  // options:
+  //   - db: <spreadsheetId>
+  //   - sheet: <sheetName>
+  //   - token: <shared secret>
+  //   - keyField: 'key' (기본), 행의 키로 쓸 필드명
+  //   - id: 로컬 저장용 추가 식별자(없으면 keyField 값 사용)
+  //   - prefix: 로컬 키 prefix
+  //   - serialize(v)/deserialize(v): 저장 전/로드 후 변환 (Date 등)
+  //   - auto: { pullOnInit=true, pullIntervalMs=0, pushDebounceMs=0, resolver=defaultResolver }
+  // -------------------------------
+  function useValue(webAppUrl, initialValue, options){
+    const opt = Object.assign({
+      db: '',
+      sheet: 'kv',
+      token: '',
+      keyField: 'key',
+      id: null,                // 로컬 스토리지 키 구성에 사용할 수 있는 추가 식별자
+      prefix: '',
+      serialize: (v)=>v,
+      deserialize: (v)=>v,
       auto: {
         pullOnInit: true,
         pullIntervalMs: 0,
         pushDebounceMs: 0,
-        resolver: defaultResolver,
-      }
-    }, opts || {});
-    // normalize auto
-    settings.auto = Object.assign({
-      pullOnInit: true,
-      pullIntervalMs: 0,
-      pushDebounceMs: 0,
-      resolver: defaultResolver,
-    }, settings.auto || {});
+        resolver: defaultResolver, // (local, remote) => final
+      },
+      // 통신 어댑터 (기본값: Apps Script 웹앱)
+      transport: null,
+    }, options||{});
+    opt.auto = Object.assign({ pullOnInit:true, pullIntervalMs:0, pushDebounceMs:0, resolver: defaultResolver }, opt.auto||{});
 
-    const storageKey = withPrefix(settings.prefix, key);
+    if (typeof webAppUrl !== 'string' || !webAppUrl) throw new Error('useValue(webAppUrl, initialValue, options): webAppUrl required');
+    if (!isObj(initialValue)) throw new Error('initialValue must be an object (row)');
 
-    // current cache
-    let current = settings.deserialize(unbox(GMX.getValue(storageKey, undefined), initialValue));
-    if (current === undefined) current = initialValue;
-
-    if (settings.persistInitial) {
-      if (GMX.getValue(storageKey, undefined) === undefined) {
-        GMX.setValue(storageKey, box(settings.serialize(initialValue)));
-      }
+    // 키 필드 확인
+    const kf = opt.keyField || 'key';
+    const initialKey = initialValue[kf];
+    if (initialKey === undefined) {
+      // 키는 런타임 setState에서 채울 수도 있으므로 강제하지 않음
     }
 
-    // GM change subscription or fallback polling
-    let gmListenerId = null;
-    let pollTimer = null;
+    // 로컬 저장 키: prefix + sheet + id(or key)
+    const localId = String(opt.id ?? initialKey ?? '__noKey__');
+    const localKey = withPrefix(opt.prefix, `${opt.sheet}:${localId}`);
 
-    // auto sync
+    // 통신 어댑터 (Apps Script 기본)
+    const transport = opt.transport || makeAppsScriptTransport(webAppUrl, opt.db, opt.sheet, opt.token);
+
+    // 현재값 캐시
+    let current = opt.deserialize(unbox(GMX.getValue(localKey, undefined), initialValue));
+    if (current === undefined) current = initialValue;
+
+    // 초기 로컬 저장(옵션 없음: 필요시 바로 저장)
+    if (GMX.getValue(localKey, undefined) === undefined) {
+      GMX.setValue(localKey, box(opt.serialize(current)));
+    }
+
+    // push/pull
+    const pushDebounced = (opt.auto.pushDebounceMs>0) ? debounce(pushOnce, opt.auto.pushDebounceMs) : pushOnce;
     let pullTimer = null;
-    const doPush = (settings.auto.pushDebounceMs > 0)
-      ? debounce(pushOnce, settings.auto.pushDebounceMs)
-      : pushOnce;
 
-    function value() {
+    // state getter
+    function state(){
       try {
-        current = settings.deserialize(unbox(GMX.getValue(storageKey, undefined), initialValue));
+        current = opt.deserialize(unbox(GMX.getValue(localKey, undefined), initialValue));
         if (current === undefined) current = initialValue;
       } catch {}
       return current;
     }
 
-    function set(next) {
-      const prev = value();
-      const nextVal = (typeof next === "function") ? next(prev) : next;
-      GMX.setValue(storageKey, box(settings.serialize(nextVal)));
-
-      // local bus for non-GM env
-      if (!GMX.addListener) emitLocal(storageKey, nextVal, prev);
-
-      // auto push
-      if (settings.sync && typeof settings.sync.push === 'function') {
-        doPush(storageKey, nextVal);
-      }
-
+    // setState
+    function setState(next){
+      const prev = state();
+      const nextVal = (typeof next === 'function') ? next(prev) : next;
+      if (!isObj(nextVal)) throw new Error('setState expects object (row)');
+      GMX.setValue(localKey, box(opt.serialize(nextVal)));
+      if (!GMX.addListener) emit(localKey, nextVal, prev);
+      // 자동 push
+      pushDebounced(nextVal);
       return nextVal;
     }
 
-    function remove() {
-      const prev = value();
-      GMX.deleteValue(storageKey);
-      if (!GMX.addListener) emitLocal(storageKey, undefined, prev);
-    }
-
-    function onChange(cb) {
-      // Prefer GM cross-tab listener
-      if (GMX.addListener) {
-        gmListenerId = GMX.addListener(storageKey, function (_key, oldBoxed, newBoxed, isRemote) {
-          const oldV = settings.deserialize(unbox(oldBoxed, undefined));
-          const newV = settings.deserialize(unbox(newBoxed, undefined));
-          current = (newV === undefined) ? initialValue : newV;
-          try { cb(current, oldV, !!isRemote, storageKey); } catch {}
-        });
-        return function off() {
-          if (gmListenerId != null && GMX.removeListener) {
-            GMX.removeListener(gmListenerId);
-            gmListenerId = null;
-          }
-        };
-      }
-
-      // Fallback: polling + local bus
-      let last = value();
-      let setRef = localBus.get(storageKey);
-      if (!setRef) {
-        setRef = new Set();
-        localBus.set(storageKey, setRef);
-      }
-      setRef.add(cb);
-
-      pollTimer = setInterval(() => {
-        const now = value();
-        if (!isEqual(now, last)) {
-          try { cb(now, last, false, storageKey); } catch {}
-          last = now;
-        }
-      }, Math.max(100, settings.pollMs));
-
-      return function off() {
-        try { clearInterval(pollTimer); } catch {}
-        const s = localBus.get(storageKey);
-        if (s) {
-          s.delete(cb);
-          if (s.size === 0) localBus.delete(storageKey);
-        }
-      };
-    }
-
-    function getOrSetDefault(factory) {
-      const cur = value();
-      if (cur === undefined) {
-        const v = (typeof factory === "function") ? factory() : factory;
-        set(v);
-        return v;
-      }
-      return cur;
-    }
-
-    // -----------------------------
-    // sync helpers
-    // -----------------------------
-    async function pushOnce(k, v) {
+    // 원격 push
+    async function pushOnce(valueObj){
       try {
-        if (!settings.sync || typeof settings.sync.push !== 'function') return;
-        await settings.sync.push(k, v);
-      } catch (e) {
-        // swallow; network errors are common in userscripts
-        // console.warn('[useValue] sync.push error:', e);
-      }
+        // key 필드 확인
+        const k = valueObj?.[kf];
+        if (!k) return; // 키 없으면 업서트 불가 (사용자가 setState로 key 채운 뒤 재호출)
+        await transport.push(opt.sheet, kf, valueObj);
+      } catch(e){}
     }
 
-    async function pullOnce(k) {
+    // 원격 pull + 병합
+    async function pullOnce(){
       try {
-        if (!settings.sync || typeof settings.sync.pull !== 'function') return;
-        const remote = await settings.sync.pull(k);
-        if (remote === undefined) return; // nothing
-        const local = value();
-
-        const resolved = settings.auto && typeof settings.auto.resolver === 'function'
-          ? settings.auto.resolver(local, remote)
-          : defaultResolver(local, remote);
-
+        const local = state();
+        const k = local?.[kf];
+        if (!k) return; // 키 없으면 조회 불가
+        const remote = await transport.pull(opt.sheet, kf, String(k));
+        if (remote === undefined || remote === null) return;
+        const resolved = (typeof opt.auto.resolver === 'function') ? opt.auto.resolver(local, remote) : defaultResolver(local, remote);
         if (!isEqual(resolved, local)) {
-          // set() will also push; avoid immediate push loop by writing directly then emitting
-          GMX.setValue(storageKey, box(settings.serialize(resolved)));
-          if (!GMX.addListener) emitLocal(storageKey, resolved, local);
+          GMX.setValue(localKey, box(opt.serialize(resolved)));
+          if (!GMX.addListener) emit(localKey, resolved, local);
         }
-      } catch (e) {
-        // console.warn('[useValue] sync.pull error:', e);
-      }
+      } catch(e){}
     }
 
-    function startAuto() {
-      // initial pull
-      if (settings.auto.pullOnInit && settings.sync && typeof settings.sync.pull === 'function') {
-        // fire-and-forget
-        pullOnce(storageKey);
-      }
-      // interval pull
-      if (settings.auto.pullIntervalMs > 0 && settings.sync && typeof settings.sync.pull === 'function') {
-        pullTimer = setInterval(() => pullOnce(storageKey), Math.max(1000, settings.auto.pullIntervalMs|0));
-      }
+    // 자동 pull
+    if (opt.auto.pullOnInit) { pullOnce(); }
+    if ((opt.auto.pullIntervalMs|0) > 0) {
+      pullTimer = setInterval(()=>pullOnce(), Math.max(1000, opt.auto.pullIntervalMs|0));
     }
 
-    function stopAuto() {
-      try { clearInterval(pullTimer); } catch {}
-    }
-
-    // start auto-sync now
-    startAuto();
-
-    const api = { key: storageKey, value, set, remove, onChange, getOrSetDefault };
-    // (optional) expose read-only opts for advanced usage
-    Object.defineProperty(api, 'opts', { enumerable: false, configurable: false, writable: false, value: settings });
-    Object.defineProperty(api, 'stopAuto', { enumerable: false, configurable: false, writable: false, value: stopAuto });
-    Object.defineProperty(api, 'pull', { enumerable: false, configurable: false, writable: false, value: () => pullOnce(storageKey) });
-    Object.defineProperty(api, 'push', { enumerable: false, configurable: false, writable: false, value: () => pushOnce(storageKey, value()) });
-
-    return api;
+    // 리턴: tuple 형태(요청대로 2개만)
+    //   - state: "함수(getter)"로 제공 (항상 최신값을 읽기 위함)
+    //   - setState: 객체 또는 (prev)=>객체
+    return [ state, setState ];
   }
 
-  // Default conflict resolver: Last-Write-Wins by numeric timestamp
-  // If objects have .ts (number) field, choose greater; else prefer remote if different.
-  function defaultResolver(local, remote) {
-    if (local && typeof local === 'object' && remote && typeof remote === 'object') {
-      const lt = Number(isFinite(local.ts) ? local.ts : -Infinity);
-      const rt = Number(isFinite(remote.ts) ? remote.ts : -Infinity);
-      if (lt !== -Infinity || rt !== -Infinity) {
-        return (rt >= lt) ? remote : local;
-      }
-      // if no ts, prefer remote on difference
-      return isEqual(local, remote) ? local : remote;
-    }
-    return (remote !== undefined) ? remote : local;
+  // 기본 충돌 해결: LWW(ts) → 없으면 remote 우선
+  function defaultResolver(local, remote){
+    const lt = Number(isFinite(local?.ts) ? local.ts : -Infinity);
+    const rt = Number(isFinite(remote?.ts) ? remote.ts : -Infinity);
+    if (isFinite(lt) || isFinite(rt)) return (rt >= lt) ? remote : local;
+    return isEqual(local, remote) ? local : remote;
   }
 
-  // -----------------------------
-  // factory (prefix-aware static API)
-  // -----------------------------
-  function factory(prefix = "") {
+  // Apps Script 전송 어댑터: 자유 컬럼(row) 업서트
+  // - row 전체를 그대로 저장 (키: keyField)
+  function makeAppsScriptTransport(webAppUrl, db, sheet, token){
+    const base = String(webAppUrl).replace(/\/exec.*$/,'/exec'); // 안전
+    const headers = { 'Content-Type': 'application/json' };
+    // TM 환경이 아니어도 fetch로 대체 가능하도록 방어
+    const hasGM = (typeof GM_xmlhttpRequest === 'function');
+
+    function httpPost(json){
+      if (hasGM) {
+        return new Promise((resolve)=> {
+          GM_xmlhttpRequest({
+            method: 'POST',
+            url: base,
+            headers,
+            data: JSON.stringify(json),
+            onload: ()=> resolve(true),
+            onerror: ()=> resolve(false),
+          });
+        });
+      } else {
+        return fetch(base, { method:'POST', headers, body: JSON.stringify(json) }).then(()=>true).catch(()=>false);
+      }
+    }
+
+    function httpGet(params){
+      const qs = new URLSearchParams(params).toString();
+      const url = `${base}?${qs}`;
+      if (hasGM) {
+        return new Promise((resolve)=> {
+          GM_xmlhttpRequest({
+            method: 'GET',
+            url,
+            onload: (res)=>{
+              try{
+                const data = JSON.parse(res.responseText);
+                resolve(data);
+              }catch{ resolve(undefined); }
+            },
+            onerror: ()=> resolve(undefined),
+          });
+        });
+      } else {
+        return fetch(url).then(r=>r.json()).catch(()=>undefined);
+      }
+    }
+
     return {
-      useValue: (k, init, opts) => useValue(k, init, Object.assign({ prefix }, opts || {})),
-      get: (k, def, deserialize = (v)=>v) => deserialize(unbox(GMX.getValue(withPrefix(prefix, k), undefined), def)),
-      set: (k, v, serialize = (v)=>v) => GMX.setValue(withPrefix(prefix, k), box(serialize(v))),
-      remove: (k) => GMX.deleteValue(withPrefix(prefix, k)),
+      // row 업서트: { keyField: 'key', valueObj: {...} }
+      async push(sheetName, keyField, valueObj){
+        const payload = {
+          db, sheet: sheetName,
+          mode: 'upsertRow',
+          keyField,
+          row: valueObj,
+          ...(token ? { token } : {}),
+        };
+        await httpPost(payload);
+      },
+      // 단건 조회
+      async pull(sheetName, keyField, keyValue){
+        const data = await httpGet({
+          db, sheet: sheetName,
+          keyField,
+          key: keyValue,
+          ...(token ? { token } : {}),
+        });
+        return data;
+      }
     };
   }
 
-  // default export
-  const defaultApi = factory("");
+  // factory (저수준)
+  function factory(){ return { useValue }; }
 
-  return Object.assign(defaultApi, {
-    factory,
-    useValue,
-  });
+  return { useValue, factory };
 });

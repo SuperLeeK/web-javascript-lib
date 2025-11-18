@@ -1,5 +1,73 @@
-// 버튼 컴포넌트
+/**
+ * 버튼 컴포넌트 클래스
+ * 
+ * 커스터마이징 가능한 버튼 컴포넌트를 생성하고 관리합니다.
+ * 다양한 variant, size, 아이콘, 로딩 상태 등을 지원합니다.
+ * 
+ * @class Button
+ * 
+ * @example
+ * // 기본 버튼 생성
+ * const button = new Button({
+ *   text: '클릭하세요',
+ *   onClick: () => console.log('클릭됨')
+ * });
+ * button.appendTo('#container');
+ * 
+ * @example
+ * // 아이콘과 함께 버튼 생성
+ * const button = new Button({
+ *   text: '저장',
+ *   icon: '💾',
+ *   iconPosition: 'left',
+ *   variant: 'success',
+ *   size: 'large',
+ *   onClick: () => saveData()
+ * });
+ * button.appendTo(document.body);ㅂ
+ * 
+ * @example
+ * // 로딩 상태가 있는 버튼
+ * const button = new Button({
+ *   text: '제출',
+ *   variant: 'primary',
+ *   loading: true,
+ *   onClick: () => submitForm()
+ * });
+ * button.appendTo('#form-container');
+ */
 class Button {
+  /**
+   * Button 인스턴스를 생성합니다.
+   * 
+   * @param {Object} [options={}] - 버튼 설정 옵션
+   * @param {string} [options.id] - 버튼의 고유 ID (지정하지 않으면 자동 생성)
+   * @param {string} [options.text='Button'] - 버튼에 표시될 텍스트
+   * @param {string} [options.type='button'] - 버튼 타입 ('button', 'submit', 'reset')
+   * @param {string} [options.variant='primary'] - 버튼 스타일 변형 ('primary', 'secondary', 'success', 'danger', 'warning', 'info', 'light', 'dark', 'outline-primary', 'outline-secondary' 등)
+   * @param {string} [options.size='medium'] - 버튼 크기 ('small', 'medium', 'large')
+   * @param {boolean} [options.disabled=false] - 버튼 비활성화 여부
+   * @param {boolean} [options.loading=false] - 로딩 상태 표시 여부
+   * @param {string|null} [options.icon=null] - 아이콘 텍스트 또는 HTML
+   * @param {string} [options.iconPosition='left'] - 아이콘 위치 ('left', 'right')
+   * @param {boolean} [options.fullWidth=false] - 전체 너비 사용 여부
+   * @param {boolean} [options.rounded=false] - 둥근 모서리 여부
+   * @param {Object} [options.theme] - 테마 색상 설정 (기본값 사용 가능)
+   * @param {Function} [options.onClick] - 클릭 이벤트 핸들러
+   * @param {Function} [options.onMouseEnter] - 마우스 진입 이벤트 핸들러
+   * @param {Function} [options.onMouseLeave] - 마우스 이탈 이벤트 핸들러
+   * 
+   * @example
+   * const button = new Button({
+   *   text: '저장',
+   *   variant: 'success',
+   *   size: 'large',
+   *   icon: '💾',
+   *   onClick: () => {
+   *     console.log('저장됨');
+   *   }
+   * });
+   */
   constructor(options = {}) {
     // 기본 설정
     this.config = {
@@ -48,7 +116,21 @@ class Button {
     this.init();
   }
 
-  // 설정 업데이트 메서드
+  /**
+   * 버튼 설정을 업데이트합니다.
+   * 
+   * @param {Object} [options={}] - 업데이트할 설정 옵션
+   * @param {Object} [options.theme] - 테마 색상 설정 (기존 테마와 병합됨)
+   * 
+   * @example
+   * button.updateConfig({
+   *   text: '새로운 텍스트',
+   *   variant: 'danger',
+   *   theme: {
+   *     primary: '#FF0000'
+   *   }
+   * });
+   */
   updateConfig(options = {}) {
     this.config = {
       ...this.config,
@@ -57,7 +139,12 @@ class Button {
     };
   }
 
-  // 크기에 따른 스타일 설정
+  /**
+   * 현재 크기에 맞는 스타일 객체를 반환합니다.
+   * 
+   * @returns {Object} 크기별 스타일 객체 (padding, fontSize, borderRadius, iconSize)
+   * @private
+   */
   getSizeStyles() {
     const sizes = {
       small: {
@@ -82,7 +169,12 @@ class Button {
     return sizes[this.config.size] || sizes.medium;
   }
 
-  // 변형에 따른 스타일 설정
+  /**
+   * 현재 variant에 맞는 스타일 객체를 반환합니다.
+   * 
+   * @returns {Object} variant별 스타일 객체 (backgroundColor, color, borderColor, hoverBackground 등)
+   * @private
+   */
   getVariantStyles() {
     const isOutline = this.config.variant.startsWith('outline');
     const baseVariant = isOutline ? this.config.variant.replace('outline-', '') : this.config.variant;
@@ -170,11 +262,23 @@ class Button {
     return style;
   }
 
+  /**
+   * 버튼 요소를 초기화합니다.
+   * 요소를 생성하고 이벤트를 바인딩합니다.
+   * 
+   * @private
+   */
   init() {
     this.createElement();
     this.bindEvents();
   }
 
+  /**
+   * 버튼 DOM 요소를 생성합니다.
+   * 
+   * @returns {HTMLButtonElement} 생성된 버튼 요소
+   * @private
+   */
   createElement() {
     const sizeStyles = this.getSizeStyles();
     const variantStyles = this.getVariantStyles();
@@ -259,6 +363,12 @@ class Button {
     return button;
   }
 
+  /**
+   * 버튼에 이벤트 리스너를 바인딩합니다.
+   * 클릭, 마우스 이벤트, 키보드 접근성을 지원합니다.
+   * 
+   * @private
+   */
   bindEvents() {
     if (this.config.disabled) return;
 
@@ -305,6 +415,12 @@ class Button {
     });
   }
 
+  /**
+   * 버튼에 로딩 스피너를 표시합니다.
+   * 
+   * @param {HTMLButtonElement} button - 로딩 스피너를 표시할 버튼 요소
+   * @private
+   */
   showLoading(button) {
     // 기존 내용 제거
     button.innerHTML = '';
@@ -335,7 +451,14 @@ class Button {
     button.appendChild(spinner);
   }
 
-  // 텍스트 설정
+  /**
+   * 버튼의 텍스트를 설정합니다.
+   * 
+   * @param {string} text - 설정할 텍스트
+   * 
+   * @example
+   * button.setText('새로운 텍스트');
+   */
   setText(text) {
     this.config.text = text;
     const textElement = this.element.querySelector('.button-text');
@@ -344,14 +467,31 @@ class Button {
     }
   }
 
-  // 아이콘 설정
+  /**
+   * 버튼의 아이콘을 설정합니다.
+   * 
+   * @param {string} icon - 아이콘 텍스트 또는 HTML
+   * @param {string} [position='left'] - 아이콘 위치 ('left', 'right')
+   * 
+   * @example
+   * button.setIcon('⭐', 'right');
+   */
   setIcon(icon, position = 'left') {
     this.config.icon = icon;
     this.config.iconPosition = position;
     this.init(); // 요소 재생성
   }
 
-  // 로딩 상태 설정
+  /**
+   * 버튼의 로딩 상태를 설정합니다.
+   * 
+   * @param {boolean} loading - 로딩 상태 (true: 로딩 표시, false: 일반 상태)
+   * 
+   * @example
+   * button.setLoading(true);  // 로딩 시작
+   * // 비동기 작업 수행
+   * button.setLoading(false); // 로딩 종료
+   */
   setLoading(loading) {
     this.config.loading = loading;
     if (loading) {
@@ -361,7 +501,15 @@ class Button {
     }
   }
 
-  // 비활성화/활성화
+  /**
+   * 버튼의 비활성화 상태를 설정합니다.
+   * 
+   * @param {boolean} disabled - 비활성화 여부 (true: 비활성화, false: 활성화)
+   * 
+   * @example
+   * button.setDisabled(true);  // 버튼 비활성화
+   * button.setDisabled(false); // 버튼 활성화
+   */
   setDisabled(disabled) {
     this.config.disabled = disabled;
     this.element.disabled = disabled;
@@ -369,19 +517,51 @@ class Button {
     this.element.style.opacity = disabled ? '0.6' : '1';
   }
 
-  // 변형 변경
+  /**
+   * 버튼의 variant(스타일 변형)를 변경합니다.
+   * 
+   * @param {string} variant - 새로운 variant ('primary', 'secondary', 'success', 'danger', 'warning', 'info', 'light', 'dark', 'outline-primary' 등)
+   * 
+   * @example
+   * button.setVariant('danger');
+   * button.setVariant('outline-primary');
+   */
   setVariant(variant) {
     this.config.variant = variant;
     this.init(); // 요소 재생성
   }
 
-  // 크기 변경
+  /**
+   * 버튼의 크기를 변경합니다.
+   * 
+   * @param {string} size - 새로운 크기 ('small', 'medium', 'large')
+   * 
+   * @example
+   * button.setSize('large');
+   */
   setSize(size) {
     this.config.size = size;
     this.init(); // 요소 재생성
   }
 
-  // DOM에 추가
+  /**
+   * 버튼을 지정된 부모 요소에 추가합니다.
+   * 
+   * @param {string|HTMLElement} parent - 부모 요소의 셀렉터 또는 HTMLElement
+   * @returns {Button} 메서드 체이닝을 위한 자기 자신 반환
+   * 
+   * @example
+   * // 셀렉터로 추가
+   * button.appendTo('#container');
+   * 
+   * @example
+   * // HTMLElement로 추가
+   * button.appendTo(document.body);
+   * 
+   * @example
+   * // 메서드 체이닝
+   * button.setText('저장').setVariant('success').appendTo('#form');
+   */
   appendTo(parent) {
     if (typeof parent === 'string') {
       parent = document.querySelector(parent);
@@ -390,14 +570,27 @@ class Button {
     return this;
   }
 
-  // DOM에서 제거
+  /**
+   * 버튼을 DOM에서 제거합니다.
+   * 
+   * @example
+   * button.remove();
+   */
   remove() {
     if (this.element && this.element.parentNode) {
       this.element.parentNode.removeChild(this.element);
     }
   }
 
-  // 요소 반환
+  /**
+   * 버튼의 DOM 요소를 반환합니다.
+   * 
+   * @returns {HTMLButtonElement} 버튼 DOM 요소
+   * 
+   * @example
+   * const buttonElement = button.getElement();
+   * buttonElement.addEventListener('customEvent', handler);
+   */
   getElement() {
     return this.element;
   }

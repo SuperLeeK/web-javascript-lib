@@ -1,47 +1,41 @@
-// Tampermonkey GM API 타입 선언
-declare function GM_setValue(name: string, value: string): void;
-declare function GM_getValue(name: string, defaultValue: string | null): string | null;
-declare function GM_deleteValue(name: string): void;
-
 /**
  * Tampermonkey GM API를 사용하는 스토리지 유틸리티
- * @template T - 저장할 값의 타입 (기본값: any)
  * @param {string} key - 스토리지 키
  * @returns {Object} 스토리지 메서드 객체
  * @example
  * // boolean 타입으로 사용
- * const storage = useGMStorage<boolean>('myKey');
+ * const storage = useGMStorage('myKey');
  * storage.add('item1', true);
  * storage.check('item1'); // true
  * 
  * // string 타입으로 사용
- * const stringStorage = useGMStorage<string>('myKey');
+ * const stringStorage = useGMStorage('myKey');
  * stringStorage.add('item1', 'downloaded');
  * 
  * // 객체 타입으로 사용
- * const objectStorage = useGMStorage<{url: string, date: number}>('myKey');
+ * const objectStorage = useGMStorage('myKey');
  * objectStorage.add('item1', {url: 'https://...', date: Date.now()});
  */
-const useGMStorage = <T = any>(key: string) => {
+const useGMStorage = (key) => {
   /**
    * 저장 함수: 객체 전체를 저장
-   * @param {Record<string, T>} data - 저장할 데이터 객체
+   * @param {Object} data - 저장할 데이터 객체
    * @example
-   * const storage = useGMStorage<boolean>('myKey');
+   * const storage = useGMStorage('myKey');
    * storage.save({ item1: true, item2: false });
    */
-  const save = (data: Record<string, T>): void => {
+  const save = (data) => {
     GM_setValue(key, JSON.stringify(data));
   };
 
   /**
    * 불러오기 함수: 저장된 데이터를 불러옴
-   * @returns {Record<string, T>} 저장된 데이터 객체 (없으면 빈 객체)
+   * @returns {Object} 저장된 데이터 객체 (없으면 빈 객체)
    * @example
-   * const storage = useGMStorage<boolean>('myKey');
+   * const storage = useGMStorage('myKey');
    * const data = storage.load(); // { item1: true, item2: false }
    */
-  const load = (): Record<string, T> => {
+  const load = () => {
     const data = GM_getValue(key, null);
     return data ? JSON.parse(data) : {};
   };
@@ -49,13 +43,13 @@ const useGMStorage = <T = any>(key: string) => {
   /**
    * 항목 추가 함수: key와 값을 이용해 항목 추가
    * @param {string} itemKey - 추가할 항목의 키
-   * @param {T} value - 저장할 값
+   * @param {*} value - 저장할 값
    * @example
-   * const storage = useGMStorage<boolean>('myKey');
+   * const storage = useGMStorage('myKey');
    * storage.add('item1', true);
    * storage.add('item2', false);
    */
-  const add = (itemKey: string, value: T): void => {
+  const add = (itemKey, value) => {
     const data = load();
     data[itemKey] = value;
     save(data);
@@ -64,13 +58,13 @@ const useGMStorage = <T = any>(key: string) => {
   /**
    * 업데이트 함수: 기존 항목의 값을 업데이트
    * @param {string} itemKey - 업데이트할 항목의 키
-   * @param {T} value - 새로운 값
+   * @param {*} value - 새로운 값
    * @example
-   * const storage = useGMStorage<boolean>('myKey');
+   * const storage = useGMStorage('myKey');
    * storage.add('item1', false);
    * storage.update('item1', true); // false -> true로 업데이트
    */
-  const update = (itemKey: string, value: T): void => {
+  const update = (itemKey, value) => {
     const data = load();
     if (data[itemKey] !== undefined) {
       data[itemKey] = value;
@@ -84,11 +78,11 @@ const useGMStorage = <T = any>(key: string) => {
    * 항목 삭제 함수: 특정 항목을 삭제
    * @param {string} itemKey - 삭제할 항목의 키
    * @example
-   * const storage = useGMStorage<boolean>('myKey');
+   * const storage = useGMStorage('myKey');
    * storage.add('item1', true);
    * storage.remove('item1'); // item1 삭제
    */
-  const remove = (itemKey: string): void => {
+  const remove = (itemKey) => {
     const data = load();
     if (data[itemKey] !== undefined) {
       delete data[itemKey];
@@ -101,12 +95,12 @@ const useGMStorage = <T = any>(key: string) => {
   /**
    * 전체 항목 삭제 함수: 스토리지의 모든 데이터를 삭제
    * @example
-   * const storage = useGMStorage<boolean>('myKey');
+   * const storage = useGMStorage('myKey');
    * storage.add('item1', true);
    * storage.add('item2', false);
    * storage.removeAll(); // 모든 데이터 삭제
    */
-  const removeAll = (): void => {
+  const removeAll = () => {
     GM_deleteValue(key);
   };
 
@@ -118,16 +112,16 @@ const useGMStorage = <T = any>(key: string) => {
    * @param {string} itemKey - 확인할 항목의 키
    * @returns {boolean} 항목이 존재하고 유효한 값인지 여부
    * @example
-   * const storage = useGMStorage<boolean>('myKey');
+   * const storage = useGMStorage('myKey');
    * storage.add('item1', true);
    * storage.check('item1'); // true
    * storage.check('item2'); // false (존재하지 않음)
    * 
-   * const stringStorage = useGMStorage<string>('myKey');
+   * const stringStorage = useGMStorage('myKey');
    * stringStorage.add('item1', 'downloaded');
    * stringStorage.check('item1'); // true (값이 존재하므로)
    */
-  const check = (itemKey: string): boolean => {
+  const check = (itemKey) => {
     const data = load();
     const value = data[itemKey];
     
@@ -147,14 +141,14 @@ const useGMStorage = <T = any>(key: string) => {
   /**
    * 값 가져오기 함수: 특정 항목의 값을 반환
    * @param {string} itemKey - 가져올 항목의 키
-   * @returns {T | undefined} 항목의 값 (없으면 undefined)
+   * @returns {*|undefined} 항목의 값 (없으면 undefined)
    * @example
-   * const storage = useGMStorage<boolean>('myKey');
+   * const storage = useGMStorage('myKey');
    * storage.add('item1', true);
    * const value = storage.get('item1'); // true
    * const notFound = storage.get('item2'); // undefined
    */
-  const get = (itemKey: string): T | undefined => {
+  const get = (itemKey) => {
     const data = load();
     return data[itemKey];
   };

@@ -310,7 +310,21 @@ function findElementByProperty(selector, property, value) {
  */
 function findElementsByProperty(selector, property, value) {
   return findElements(selector, (element) => {
-    // 점 표기법으로 중첩된 속성 접근 (예: 'dataset.id')
+    // ---------------------------------------------------------
+    // 1. HTML 표준 속성(Attribute) 우선 검색 (aria-label 등 해결)
+    // ---------------------------------------------------------
+    // 점(.)이 없는 일반 속성 이름이라면 getAttribute로 먼저 확인합니다.
+    if (!property.includes('.') && element.getAttribute) {
+      const attrValue = element.getAttribute(property);
+      if (attrValue === value || String(attrValue) === String(value)) {
+        return true;
+      }
+    }
+
+    // ---------------------------------------------------------
+    // 2. 자바스크립트 프로퍼티(Property) 검색 (기존 로직)
+    // ---------------------------------------------------------
+    // dataset.id, className, value, checked 등
     const keys = property.split('.');
     let current = element;
 
@@ -322,4 +336,3 @@ function findElementsByProperty(selector, property, value) {
     return current === value || String(current) === String(value);
   });
 }
-

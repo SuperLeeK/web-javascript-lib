@@ -336,3 +336,54 @@ function findElementsByProperty(selector, property, value) {
     return current === value || String(current) === String(value);
   });
 }
+
+/**
+ * 대상 요소에 특정 키(Key) 이벤트를 강제로 발생시킵니다.
+ * * @param {Element} element - 이벤트를 받을 DOM 요소
+ * @param {string} keyName - 입력할 키 이름 (예: 'Enter', 'ArrowDown', 'Escape', 'a')
+ * @param {object} [options] - (선택) Ctrl, Shift 등 추가 옵션 { ctrlKey: true, altKey: false, ... }
+ */
+function triggerToElement(element, keyName, options = {}) {
+  if (!element) return;
+
+  // 자주 쓰이는 키에 대한 keyCode 매핑 (호환성 보장용)
+  const keyMap = {
+    'Enter': { code: 'Enter', keyCode: 13 },
+    'Escape': { code: 'Escape', keyCode: 27 },
+    'Backspace': { code: 'Backspace', keyCode: 8 },
+    'Tab': { code: 'Tab', keyCode: 9 },
+    'Space': { code: 'Space', keyCode: 32 },
+    'ArrowLeft': { code: 'ArrowLeft', keyCode: 37 },
+    'ArrowUp': { code: 'ArrowUp', keyCode: 38 },
+    'ArrowRight': { code: 'ArrowRight', keyCode: 39 },
+    'ArrowDown': { code: 'ArrowDown', keyCode: 40 },
+    'Delete': { code: 'Delete', keyCode: 46 }
+  };
+
+  // 매핑된 정보가 없으면 기본값 설정 (일반 문자 등)
+  const keyInfo = keyMap[keyName] || {
+    code: `Key${keyName.toUpperCase()}`,
+    keyCode: keyName.charCodeAt(0) // 간단한 문자열의 경우 아스키코드로 변환 시도
+  };
+
+  const eventInit = {
+    bubbles: true,
+    cancelable: true,
+    key: keyName,
+    code: keyInfo.code,
+    keyCode: keyInfo.keyCode,
+    which: keyInfo.keyCode,
+    charCode: keyInfo.keyCode,
+    // 옵션 병합 (Ctrl, Shift, Alt 상태 등)
+    ctrlKey: options.ctrlKey || false,
+    shiftKey: options.shiftKey || false,
+    altKey: options.altKey || false,
+    metaKey: options.metaKey || false
+  };
+
+  const event = new KeyboardEvent('keydown', eventInit);
+
+  // 포커스가 있어야만 키 입력을 받는 요소들이 많으므로 포커스 시도
+  element.focus();
+  element.dispatchEvent(event);
+}

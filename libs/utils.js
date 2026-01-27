@@ -387,3 +387,29 @@ function triggerToElement(element, keyName, options = {}) {
   element.focus();
   element.dispatchEvent(event);
 }
+
+
+
+/**
+ * 대상 요소에 마우스 클릭 이벤트를 강제로 발생시킵니다.
+ * @param {Element} element - 이벤트를 받을 DOM 요소
+ */
+function clickToElement(element) {
+  if (!element) return;
+
+  // 1. 최신 표준 MouseEvent 생성
+  const mouseEvent = new MouseEvent('click', {
+    bubbles: true,    // 상위 요소로 이벤트 전파 (필수)
+    cancelable: true, // 취소 가능 여부
+    view: window
+  });
+
+  // 2. 포커스 시도 (일부 UI는 포커스 상태여야 반응함)
+  element?.focus?.();
+
+  // 3. 이벤트 발송
+  element?.dispatchEvent?.(mouseEvent);
+
+  // 혹시 위 방법이 막혀있을 경우를 대비한 네이티브 메서드 호출 (보험용)
+  element?.click?.();
+}

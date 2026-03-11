@@ -48,3 +48,53 @@ function useKeysPress(targetKeys, callback) {
     document.removeEventListener('keyup', handleKeyUp);
   };
 }
+
+// 현재 눌려진 단일 키를 가져오는 함수
+function useGetKeyPress() {
+  let pressedKey = null;
+
+  function handleKeyDown(event) {
+    pressedKey = event.key;
+  }
+
+  function handleKeyUp(event) {
+    if (pressedKey === event.key) {
+      pressedKey = null;
+    }
+  }
+
+  document.addEventListener('keydown', handleKeyDown);
+  document.addEventListener('keyup', handleKeyUp);
+
+  return {
+    getKey: () => pressedKey,
+    removeListener: () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('keyup', handleKeyUp);
+    }
+  };
+}
+
+// 현재 눌려진 여러 키들을 배열로 가져오는 함수
+function useGetKeysPress() {
+  const pressedKeys = new Set();
+
+  function handleKeyDown(event) {
+    pressedKeys.add(event.key);
+  }
+
+  function handleKeyUp(event) {
+    pressedKeys.delete(event.key);
+  }
+
+  document.addEventListener('keydown', handleKeyDown);
+  document.addEventListener('keyup', handleKeyUp);
+
+  return {
+    getKeys: () => Array.from(pressedKeys),
+    removeListener: () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('keyup', handleKeyUp);
+    }
+  };
+}

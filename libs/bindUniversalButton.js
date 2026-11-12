@@ -117,7 +117,9 @@ function bindUniversalButton() {
                 alert('올바른 자바스크립트 함수 이름을 입력하세요.');
                 return;
             }
-            window[fnName] = fn;
+            // userscript 샌드박스에서는 unsafeWindow가 페이지 전역이라 거기에 등록해야 콘솔에서 보인다.
+            const globalWin = (typeof unsafeWindow !== 'undefined' && unsafeWindow) ? unsafeWindow : window;
+            globalWin[fnName] = fn;
             console.log(`🎉 [${mode}] 등록 완료! 콘솔에서 ${fnName}() 실행 가능`);
             modal.remove();
         };

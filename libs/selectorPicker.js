@@ -18,11 +18,62 @@
 //   evaluateSelector(selector, root?) -> { ok, error, count, elements }   실행 결과를 바로 볼 때 쓴다
 //   selectorCandidates(el) -> [{ selector, count }]                       추천 선택자 목록
 
+// 어댑블로커와 같은 규칙: #prefix* 는 [id^="prefix"] 로 바꾼다
+function normalizeWildcardSelector(selector) {
+    return String(selector || '').replace(/#([a-zA-Z0-9_\-]+)\*/g, (m, prefix) => `[id^="${prefix}"]`);
+}
+
+// 확장 문법 :has-text("글") / :contains("글") 을 지원한다 (어댑블로커와 같은 규칙).
+// 예: div.item:has-text("1화부터") > a  /  li:has-text(/완결/i)
+// 글 조건은 앞쪽 선택자로 후보를 모은 뒤 textContent 로 거른다. 뒤에 > 나 공백 자식 선택자를 붙이면 그 안에서 찾는다.
+function queryExtended(selectorStr, root) {
+    const scope = root || document;
+    const hasTextIdx = selectorStr.indexOf(':has-text(');
+    const containsIdx = selectorStr.indexOf(':contains(');
+    if (hasTextIdx === -1 && containsIdx === -1) return Array.from(scope.querySelectorAll(selectorStr));
+
+    const keyword = hasTextIdx !== -1 ? ':has-text(' : ':contains(';
+    const targetIdx = hasTextIdx !== -1 ? hasTextIdx : containsIdx;
+    const prefix = selectorStr.substring(0, targetIdx).trim();
+    const rest = selectorStr.substring(targetIdx + keyword.length);
+    const closeIdx = rest.indexOf(')');
+    if (closeIdx === -1) return Array.from(scope.querySelectorAll(selectorStr)); // 잘못된 문법이면 여기서 오류가 난다
+
+    let pattern = rest.substring(0, closeIdx).trim();
+    const suffix = rest.substring(closeIdx + 1);
+    let baseSelector = prefix || '*';
+    let childSelector = '';
+    if (suffix.trim()) {
+        const s = suffix.trimStart();
+        if (/^[>+~ ]/.test(suffix) || s.startsWith('>') || s.startsWith('+') || s.startsWith('~')) childSelector = s.trim();
+        else baseSelector = prefix + suffix.trim();
+    }
+
+    if ((pattern.startsWith("'") && pattern.endsWith("'")) || (pattern.startsWith('"') && pattern.endsWith('"'))) {
+        pattern = pattern.slice(1, -1);
+    }
+
+    const matchText = (text) => {
+        if (pattern.startsWith('/') && pattern.lastIndexOf('/') > 0) {
+            const i = pattern.lastIndexOf('/');
+            try { return new RegExp(pattern.slice(1, i), pattern.slice(i + 1)).test(text); } catch (e) { return false; }
+        }
+        return text.includes(pattern);
+    };
+
+    const filtered = Array.from(scope.querySelectorAll(baseSelector)).filter((el) => matchText(el.textContent || ''));
+    if (!childSelector) return filtered;
+
+    const results = [];
+    filtered.forEach((parent) => results.push(...Array.from(parent.querySelectorAll(':scope ' + childSelector))));
+    return Array.from(new Set(results));
+}
+
 function evaluateSelector(selector, root) {
-    const text = String(selector || '').trim();
+    const text = normalizeWildcardSelector(String(selector || '').trim());
     if (!text) return { ok: false, error: '선택자가 비어 있습니다', count: 0, elements: [] };
     try {
-        const elements = Array.from((root || document).querySelectorAll(text));
+        const elements = queryExtended(text, root);
         return { ok: true, error: '', count: elements.length, elements };
     } catch (e) {
         return { ok: false, error: e.message, count: 0, elements: [] };
